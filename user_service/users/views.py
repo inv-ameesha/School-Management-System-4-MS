@@ -19,6 +19,7 @@ from rest_framework import permissions
 from django.db import transaction
 import csv
 from io import TextIOWrapper
+from .grpc_client import ExamGRPCClient
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -236,4 +237,139 @@ class ImportStudentsCSV(APIView):
             status=status.HTTP_201_CREATED if created else status.HTTP_400_BAD_REQUEST,
         )
 
+class ExamCreateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
+    def post(self, request):
+        user = request.user
+
+        if not hasattr(user, "teacher") or user.teacher is None:
+            return Response(
+                {"error": "Only teachers can create exams."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        teacher_id = user.teacher.id#teacher table id
+        data = request.data
+        required_fields = ["title", "subject", "date", "duration"]
+        for field in required_fields:
+            if not data.get(field):
+                return Response({"error": f"{field} is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+        client = ExamGRPCClient()
+        try:
+            response = client.create_exam(
+                title=data.get("title"),
+                subject=data.get("subject"),
+                date=data.get("date"),
+                duration=data.get("duration"),
+                teacher_id=teacher_id
+            )
+            return Response(
+                {"exam_id": response.exam_id, "message": response.message},#server response
+                status=status.HTTP_201_CREATED
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # finally:
+        #     client.channel.close()
+
+    def get(self, request):
+        client = ExamGRPCClient()
+        try:
+            response = client.list_exams()
+            exams = []
+            for exam in response.exams:
+                exams.append({
+                    "id": exam.exam_id,
+                    "title": exam.title,
+                    "subject": exam.subject,
+                    "date": exam.date,
+                    "duration": exam.duration,
+                    "teacher_id": exam.teacher_id,
+                })
+            return Response(exams, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AssignExamView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+
+        # Only teachers can assign exams
+        if not hasattr(user, "teacher") or user.teacher is None:
+            return Response(
+                {"error": "Only teachers can assign exams."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        exam_id = request.data.get("exam_id")
+        student_ids = request.data.get("student_ids")  # expected list of IDs
+
+        if not exam_id or not isinstance(student_ids, list) or not student_ids:
+            return Response(
+                {"error": "exam_id and student_ids (list) are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        client = ExamGRPCClient()
+        try:
+            response = client.assign_exam(exam_id=exam_id, student_ids=student_ids)
+            return Response({"message": response.message}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class StudentAssignedExamsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not hasattr(request.user, "student"):
+            return Response({"detail": "Only students can view assigned exams."}, status=403)
+
+        student_id = request.user.student.id
+        client = ExamGRPCClient()
+        try:
+            response = client.get_exams_by_student(student_id)
+            exams = [
+                {
+                    "id": exam.exam_id,
+                    "title": exam.title,
+                    "subject": exam.subject,
+                    "date": exam.date,
+                    "duration": exam.duration,
+                    "teacher_id": exam.teacher_id
+                }
+                for exam in response.exams
+            ]
+            return Response(exams, status=200)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+class TeacherCreatedExamsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not hasattr(request.user, "teacher"):
+            return Response({"detail": "Only teachers can view their exams."}, status=403)
+
+        teacher_id = request.user.teacher.id
+        client = ExamGRPCClient()
+        try:
+            response = client.get_exams_by_teacher(teacher_id)
+            exams = [
+                {
+                    "id": exam.exam_id,
+                    "title": exam.title,
+                    "subject": exam.subject,
+                    "date": exam.date,
+                    "duration": exam.duration,
+                    "teacher_id": exam.teacher_id
+                }
+                for exam in response.exams
+            ]
+            return Response(exams, status=200)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)

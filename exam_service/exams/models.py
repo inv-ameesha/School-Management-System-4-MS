@@ -26,21 +26,21 @@ class Question(models.Model):
 
 class ExamAssignment(models.Model):
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE)
-    student = models.ForeignKey(User, on_delete=models.CASCADE)
+    student_id = models.IntegerField(null=True, blank=True)
     assigned_at = models.DateTimeField(auto_now_add=True)
     def __str__(self):
-        return f"{self.student.username} -> {self.exam.title}"
+        return f"StudentID {self.student_id} -> {self.exam.title}"
 
 
 class StudentExamAttempt(models.Model):
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE)
-    student = models.ForeignKey(User, on_delete=models.CASCADE)
+    student_id = models.IntegerField(null=True, blank=True)
     started_at = models.DateTimeField(auto_now_add=True)
     score = models.IntegerField(null=True, blank=True) 
     submitted = models.BooleanField(default=False)
 
     def is_time_over(self):
-        return self.start_time + timedelta(minutes=self.exam.duration_minutes) < timezone.now()
+        return self.started_at + timedelta(minutes=self.exam.duration) < timezone.now()
 
     def __str__(self):
         return f"{self.student.username} - {self.exam.title}"

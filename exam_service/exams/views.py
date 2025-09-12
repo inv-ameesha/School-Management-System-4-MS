@@ -18,16 +18,16 @@ class TeacherCreatedExamsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        exams = Exam.objects.filter(teacher=request.user)
+        exams = Exam.objects.filter(teacher=request.user.teacher)
         serializer = ExamSerializer(exams, many=True)
         return Response(serializer.data)
 
-class ExamCreateView(generics.CreateAPIView):
-    serializer_class = ExamSerializer
-    permission_classes = [permissions.IsAuthenticated]
+# class ExamCreateView(generics.CreateAPIView):
+#     serializer_class = ExamSerializer
+#     permission_classes = [permissions.IsAuthenticated]
 
-    def perform_create(self, serializer):
-        serializer.save(teacher=self.request.user)
+#     def perform_create(self, serializer):
+#         serializer.save(teacher=self.request.user)
 
 class AssignExamView(generics.CreateAPIView):
     serializer_class = ExamAssignmentSerializer
@@ -35,7 +35,7 @@ class AssignExamView(generics.CreateAPIView):
 
     def post(self, request, *args, **kwargs):
         exam_id = request.data.get('exam')
-        student_ids = request.data.get('students')  # list of Student IDs
+        student_ids = request.data.get('students') 
 
         try:
             exam = Exam.objects.get(id=exam_id)
@@ -43,9 +43,12 @@ class AssignExamView(generics.CreateAPIView):
             return Response({'error': 'Exam not found'}, status=404)
 
         for sid in student_ids:
-            student_obj = Student.objects.get(id=sid)
-            user_obj = student_obj.user
-            ExamAssignment.objects.get_or_create(exam=exam, student=user_obj)  # must use user_obj
+            try:
+                student_obj = Student.objects.get(id=sid)
+                # Assign exam to the student object
+                ExamAssignment.objects.get_or_create(exam=exam, student=student_obj)
+            except Student.DoesNotExist:
+                return Response(f"Student with ID {sid} does not exist. Skipping.")
 
         return Response({'message': 'Exam assigned successfully'}, status=201)
 
@@ -84,7 +87,8 @@ class AttemptExamView(APIView):
             return Response({'error': 'Exam not found'}, status=404)
 
         # Check if already attempted
-        if StudentExamAttempt.objects.filter(student=user, exam=exam).exists():
+        student = Student.objects.get(user=user)
+        if StudentExamAttempt.objects.filter(student=student, exam=exam).exists():
             return Response({'message': 'Exam already submitted'}, status=403)
 
         # Create the attempt
@@ -102,7 +106,7 @@ class AssignedExamsListView(generics.ListAPIView):
             print(student)
         except Student.DoesNotExist:
             return ExamAssignment.objects.none()
-        assignments = ExamAssignment.objects.filter(student=user)  # must use user
+        assignments = ExamAssignment.objects.filter(student=student)  # must use user
         valid_assignments = []
         for assignment in assignments:
             exam = assignment.exam

@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nexam.proto\x12\x05\x65xams\"\x07\n\x05\x45mpty\"\x1e\n\x0b\x45xamRequest\x12\x0f\n\x07\x65xam_id\x18\x01 \x01(\x05\"g\n\x11\x43reateExamRequest\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0f\n\x07subject\x18\x02 \x01(\t\x12\x0c\n\x04\x64\x61te\x18\x03 \x01(\t\x12\x10\n\x08\x64uration\x18\x04 \x01(\x05\x12\x12\n\nteacher_id\x18\x05 \x01(\x05\"s\n\x0c\x45xamResponse\x12\x0f\n\x07\x65xam_id\x18\x01 \x01(\x05\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0f\n\x07subject\x18\x03 \x01(\t\x12\x0c\n\x04\x64\x61te\x18\x04 \x01(\t\x12\x10\n\x08\x64uration\x18\x05 \x01(\x05\x12\x12\n\nteacher_id\x18\x06 \x01(\x05\"7\n\x11ListExamsResponse\x12\"\n\x05\x65xams\x18\x01 \x03(\x0b\x32\x13.exams.ExamResponse\"6\n\x12\x43reateExamResponse\x12\x0f\n\x07\x65xam_id\x18\x01 \x01(\x05\x12\x0f\n\x07message\x18\x02 \x01(\t2\xb9\x01\n\x0b\x45xamService\x12\x32\n\x07GetExam\x12\x12.exams.ExamRequest\x1a\x13.exams.ExamResponse\x12\x33\n\tListExams\x12\x0c.exams.Empty\x1a\x18.exams.ListExamsResponse\x12\x41\n\nCreateExam\x12\x18.exams.CreateExamRequest\x1a\x19.exams.CreateExamResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nexam.proto\x12\x05\x65xams\"\x07\n\x05\x45mpty\"\x1e\n\x0b\x45xamRequest\x12\x0f\n\x07\x65xam_id\x18\x01 \x01(\x05\"g\n\x11\x43reateExamRequest\x12\r\n\x05title\x18\x01 \x01(\t\x12\x0f\n\x07subject\x18\x02 \x01(\t\x12\x0c\n\x04\x64\x61te\x18\x03 \x01(\t\x12\x10\n\x08\x64uration\x18\x04 \x01(\x05\x12\x12\n\nteacher_id\x18\x05 \x01(\x05\"s\n\x0c\x45xamResponse\x12\x0f\n\x07\x65xam_id\x18\x01 \x01(\x05\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0f\n\x07subject\x18\x03 \x01(\t\x12\x0c\n\x04\x64\x61te\x18\x04 \x01(\t\x12\x10\n\x08\x64uration\x18\x05 \x01(\x05\x12\x12\n\nteacher_id\x18\x06 \x01(\x05\"7\n\x11ListExamsResponse\x12\"\n\x05\x65xams\x18\x01 \x03(\x0b\x32\x13.exams.ExamResponse\"6\n\x12\x43reateExamResponse\x12\x0f\n\x07\x65xam_id\x18\x01 \x01(\x05\x12\x0f\n\x07message\x18\x02 \x01(\t\"9\n\x11\x41ssignExamRequest\x12\x0f\n\x07\x65xam_id\x18\x01 \x01(\x05\x12\x13\n\x0bstudent_ids\x18\x02 \x03(\x05\"%\n\x12\x41ssignExamResponse\x12\x0f\n\x07message\x18\x01 \x01(\t\"$\n\x0eStudentRequest\x12\x12\n\nstudent_id\x18\x01 \x01(\x05\"$\n\x0eTeacherRequest\x12\x12\n\nteacher_id\x18\x01 \x01(\x05\x32\x88\x03\n\x0b\x45xamService\x12\x32\n\x07GetExam\x12\x12.exams.ExamRequest\x1a\x13.exams.ExamResponse\x12\x33\n\tListExams\x12\x0c.exams.Empty\x1a\x18.exams.ListExamsResponse\x12\x41\n\nCreateExam\x12\x18.exams.CreateExamRequest\x1a\x19.exams.CreateExamResponse\x12\x41\n\nAssignExam\x12\x18.exams.AssignExamRequest\x1a\x19.exams.AssignExamResponse\x12\x44\n\x11GetExamsByStudent\x12\x15.exams.StudentRequest\x1a\x18.exams.ListExamsResponse\x12\x44\n\x11GetExamsByTeacher\x12\x15.exams.TeacherRequest\x1a\x18.exams.ListExamsResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -43,6 +43,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_LISTEXAMSRESPONSE']._serialized_end=339
   _globals['_CREATEEXAMRESPONSE']._serialized_start=341
   _globals['_CREATEEXAMRESPONSE']._serialized_end=395
-  _globals['_EXAMSERVICE']._serialized_start=398
-  _globals['_EXAMSERVICE']._serialized_end=583
+  _globals['_ASSIGNEXAMREQUEST']._serialized_start=397
+  _globals['_ASSIGNEXAMREQUEST']._serialized_end=454
+  _globals['_ASSIGNEXAMRESPONSE']._serialized_start=456
+  _globals['_ASSIGNEXAMRESPONSE']._serialized_end=493
+  _globals['_STUDENTREQUEST']._serialized_start=495
+  _globals['_STUDENTREQUEST']._serialized_end=531
+  _globals['_TEACHERREQUEST']._serialized_start=533
+  _globals['_TEACHERREQUEST']._serialized_end=569
+  _globals['_EXAMSERVICE']._serialized_start=572
+  _globals['_EXAMSERVICE']._serialized_end=964
 # @@protoc_insertion_point(module_scope)

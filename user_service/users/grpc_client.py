@@ -1,6 +1,7 @@
 import grpc
-from exam_pb2 import ExamRequest, CreateExamRequest
+from exam_pb2 import ExamRequest, CreateExamRequest , AssignExamRequest , StudentRequest , TeacherRequest
 from exam_pb2_grpc import ExamServiceStub
+from exam_pb2 import Empty
 
 class ExamGRPCClient:
     def __init__(self, host='127.0.0.1', port=50051):
@@ -23,26 +24,22 @@ class ExamGRPCClient:
         response = self.stub.GetExam(ExamRequest(exam_id=exam_id))
         return response
 
-if __name__ == "__main__":
-    try:
-        client = ExamGRPCClient()
-        # import time
-        # time.sleep(5) 
-        created = client.create_exam(
-            title="English Test",
-            subject="Propositions",
-            date="2025-09-15",
-            duration=60,
-            teacher_id=1
-        )
-        print(f"Created Exam: ID={created.exam_id}, Message={created.message}")
+    def list_exams(self): 
+        #Empty()- no need of any request to be passed to the server
+        response = self.stub.ListExams(Empty())#gets the listexams method from server 
+        return response
 
-        exam = client.get_exam(exam_id=created.exam_id)
-        print(
-            f"Exam Details -> ID: {exam.exam_id}, "
-            f"Title: {exam.title}, Subject: {exam.subject}, "
-            f"Date: {exam.date}, Duration: {exam.duration}, "
-            f"Teacher ID: {exam.teacher_id}"
+    def assign_exam(self, exam_id, student_ids):
+        request = AssignExamRequest(
+            exam_id=exam_id,
+            student_ids=student_ids,
         )
-    except Exception as e:
-        print(f"Error: {e}")
+        return self.stub.AssignExam(request)
+
+    def get_exams_by_student(self, student_id):
+        request = StudentRequest(student_id=student_id)
+        return self.stub.GetExamsByStudent(request)
+
+    def get_exams_by_teacher(self, teacher_id):
+        request = TeacherRequest(teacher_id=teacher_id)
+        return self.stub.GetExamsByTeacher(request)

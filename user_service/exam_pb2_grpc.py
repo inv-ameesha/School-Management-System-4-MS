@@ -49,6 +49,21 @@ class ExamServiceStub(object):
                 request_serializer=exam__pb2.CreateExamRequest.SerializeToString,
                 response_deserializer=exam__pb2.CreateExamResponse.FromString,
                 _registered_method=True)
+        self.AssignExam = channel.unary_unary(
+                '/exams.ExamService/AssignExam',
+                request_serializer=exam__pb2.AssignExamRequest.SerializeToString,
+                response_deserializer=exam__pb2.AssignExamResponse.FromString,
+                _registered_method=True)
+        self.GetExamsByStudent = channel.unary_unary(
+                '/exams.ExamService/GetExamsByStudent',
+                request_serializer=exam__pb2.StudentRequest.SerializeToString,
+                response_deserializer=exam__pb2.ListExamsResponse.FromString,
+                _registered_method=True)
+        self.GetExamsByTeacher = channel.unary_unary(
+                '/exams.ExamService/GetExamsByTeacher',
+                request_serializer=exam__pb2.TeacherRequest.SerializeToString,
+                response_deserializer=exam__pb2.ListExamsResponse.FromString,
+                _registered_method=True)
 
 
 class ExamServiceServicer(object):
@@ -72,6 +87,24 @@ class ExamServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AssignExam(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetExamsByStudent(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetExamsByTeacher(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ExamServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -89,6 +122,21 @@ def add_ExamServiceServicer_to_server(servicer, server):
                     servicer.CreateExam,
                     request_deserializer=exam__pb2.CreateExamRequest.FromString,
                     response_serializer=exam__pb2.CreateExamResponse.SerializeToString,
+            ),
+            'AssignExam': grpc.unary_unary_rpc_method_handler(
+                    servicer.AssignExam,
+                    request_deserializer=exam__pb2.AssignExamRequest.FromString,
+                    response_serializer=exam__pb2.AssignExamResponse.SerializeToString,
+            ),
+            'GetExamsByStudent': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetExamsByStudent,
+                    request_deserializer=exam__pb2.StudentRequest.FromString,
+                    response_serializer=exam__pb2.ListExamsResponse.SerializeToString,
+            ),
+            'GetExamsByTeacher': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetExamsByTeacher,
+                    request_deserializer=exam__pb2.TeacherRequest.FromString,
+                    response_serializer=exam__pb2.ListExamsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -172,6 +220,87 @@ class ExamService(object):
             '/exams.ExamService/CreateExam',
             exam__pb2.CreateExamRequest.SerializeToString,
             exam__pb2.CreateExamResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AssignExam(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/exams.ExamService/AssignExam',
+            exam__pb2.AssignExamRequest.SerializeToString,
+            exam__pb2.AssignExamResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetExamsByStudent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/exams.ExamService/GetExamsByStudent',
+            exam__pb2.StudentRequest.SerializeToString,
+            exam__pb2.ListExamsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetExamsByTeacher(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/exams.ExamService/GetExamsByTeacher',
+            exam__pb2.TeacherRequest.SerializeToString,
+            exam__pb2.ListExamsResponse.FromString,
             options,
             channel_credentials,
             insecure,

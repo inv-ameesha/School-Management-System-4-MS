@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package exams;
+
+service ExamService {
+  rpc GetExam (ExamRequest) returns (ExamResponse);
+  rpc ListExams (Empty) returns (ListExamsResponse);
+  rpc CreateExam (CreateExamRequest) returns (CreateExamResponse);
+  rpc AssignExam(AssignExamRequest) returns (AssignExamResponse);
+  rpc GetExamsByStudent(StudentRequest) returns (ListExamsResponse);
+  rpc GetExamsByTeacher(TeacherRequest) returns (ListExamsResponse);
+}
+
+message Empty {}
+
+message ExamRequest {
+  int32 exam_id = 1;
+}
+
+message CreateExamRequest {
+  string title = 1;
+  string subject = 2;
+  string date = 3;
+  int32 duration = 4;
+  int32 teacher_id = 5;
+}
+
+message ExamResponse {
+  int32 exam_id = 1;
+  string title = 2;
+  string subject = 3;
+  string date = 4;
+  int32 duration = 5;
+  int32 teacher_id = 6;
+}
+
+message ListExamsResponse {
+  repeated ExamResponse exams = 1;
+}
+
+message CreateExamResponse {
+  int32 exam_id = 1;
+  string message = 2;
+}
+
+message AssignExamRequest {
+  int32 exam_id = 1;
+  repeated int32 student_ids = 2;
+}
+
+message AssignExamResponse {
+  string message = 1;
+}
+
+message StudentRequest {
+  int32 student_id = 1;
+}
+
+message TeacherRequest {
+  int32 teacher_id = 1;
+}
