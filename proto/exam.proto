@@ -1,20 +1,21 @@
-syntax = "proto3";
+syntax = "proto3";//current version
 
-package exams;
+package exams;//generated grpc files will have this package + extension
 
-service ExamService {
-  rpc GetExam (ExamRequest) returns (ExamResponse);
-  rpc ListExams (Empty) returns (ListExamsResponse);
-  rpc CreateExam (CreateExamRequest) returns (CreateExamResponse);
-  rpc AssignExam(AssignExamRequest) returns (AssignExamResponse);
-  rpc GetExamsByStudent(StudentRequest) returns (ListExamsResponse);
-  rpc GetExamsByTeacher(TeacherRequest) returns (ListExamsResponse);
+service ExamService {//declares an examservice as serviceand defines rpc within that
+  rpc GetExam (ExamRequest) returns (ExamResponse);//get a single exam by exam_id
+  rpc ListExams (Empty) returns (ListExamsResponse);//list all exams
+  rpc CreateExam (CreateExamRequest) returns (CreateExamResponse);//create new exam
+  rpc AssignExam(AssignExamRequest) returns (AssignExamResponse);//assign an exam exam by teacher to student
+  rpc GetExamsByStudent(StudentRequest) returns (ListExamsResponse);//get exams assigned to a student
+  rpc GetExamsByTeacher(TeacherRequest) returns (ListExamsResponse);//get exams assigned by a teacher
 }
 
+//if a request requires no params then empty
 message Empty {}
 
 message ExamRequest {
-  int32 exam_id = 1;
+  int32 exam_id = 1;//passes id as parameter, 1 indicates the field number
 }
 
 message CreateExamRequest {
@@ -24,7 +25,7 @@ message CreateExamRequest {
   int32 duration = 4;
   int32 teacher_id = 5;
 }
-
+//what server returns after passing response for exam
 message ExamResponse {
   int32 exam_id = 1;
   string title = 2;
@@ -33,7 +34,8 @@ message ExamResponse {
   int32 duration = 5;
   int32 teacher_id = 6;
 }
-
+//repeated means array/list 
+//returns object
 message ListExamsResponse {
   repeated ExamResponse exams = 1;
 }
@@ -45,7 +47,7 @@ message CreateExamResponse {
 
 message AssignExamRequest {
   int32 exam_id = 1;
-  repeated int32 student_ids = 2;
+  repeated int32 student_ids = 2;//allows assigning exam to multiple studennts as a list
 }
 
 message AssignExamResponse {
