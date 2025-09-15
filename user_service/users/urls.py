@@ -4,7 +4,9 @@ from .views import (
     ImportStudentsCSV,
     TeacherViewSet, StudentViewSet,
     CustomTokenObtainPairView,ExamCreateView,AssignExamView,
-    StudentAssignedExamsView,TeacherCreatedExamsView
+    StudentAssignedExamsView,TeacherCreatedExamsView, FeeAllocationView,
+    InitiatePaymentView, SimulateRazorpayPaymentView , VerifyRazorpayPaymentView,
+    AttemptExamView
 )
 from django.conf.urls.static import static
 from django.conf import settings
@@ -22,4 +24,9 @@ urlpatterns = [
     path('exams/assign/', AssignExamView.as_view(), name='exam-assign'),
     path("exams/teacher/", TeacherCreatedExamsView.as_view(), name="teacher-exams"),
     path("exams/student/", StudentAssignedExamsView.as_view(), name="student-exams"),
+    path('exam/attempt/', AttemptExamView.as_view(), name='exam-attempt'),
+    path('fee-allocation/', FeeAllocationView.as_view(), name='fee-allocation'),
+    path('pay/initiate/', InitiatePaymentView.as_view(), name='initiate-payment'),
+    path("simulate/", SimulateRazorpayPaymentView.as_view(), name="simulate-payment"),
+    path('pay/verify/', VerifyRazorpayPaymentView.as_view(), name='verify-payment'),
 ]

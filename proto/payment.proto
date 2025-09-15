@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+package payment;
+
+//Service
+service PaymentService {
+  rpc AllocateFee(FeeAllocationRequest) returns (FeeAllocationResponse);
+  rpc AllocateFeeForStudent (AllocateFeeForStudentRequest) returns (AllocateFeeForStudentResponse);
+  rpc GetStudentFees(StudentFeeRequest) returns (StudentFeeListResponse);
+  rpc GetPaymentOptions(Empty) returns (PaymentOptionsResponse);
+  rpc InitiatePayment(InitiatePaymentRequest) returns (InitiatePaymentResponse);
+  rpc VerifyRazorpayPayment(VerifyRazorpayRequest) returns (VerifyRazorpayResponse);
+  rpc SimulateRazorpayPayment(SimulateRazorpayRequest) returns (SimulateRazorpayResponse);
+  rpc GetStudent(GetStudentRequest) returns (GetStudentResponse);
+  rpc GenerateReceipt(GenerateReceiptRequest) returns (GenerateReceiptResponse);
+}
+
+// Common 
+message Empty {}
+
+//  Fee Allocation 
+message FeeAllocationRequest {
+  string grade = 1;
+  string academic_year = 2;
+  double base_fee = 3;
+  string due_date = 4;
+  double fine_per_day = 5;
+}
+
+message FeeAllocationResponse {
+  string message = 1;
+}
+
+message AllocateFeeForStudentRequest {
+  int32 student_id = 1;
+  int32 grade = 2;
+  string academic_year = 3;
+}
+
+message AllocateFeeForStudentResponse {
+  string message = 1;
+}
+
+//Student Fee 
+message StudentFeeRequest {
+  int32 student_id = 1;  // student comes from user_service
+}
+
+message StudentFee {
+  int32 id = 1;
+  int32 student_id = 2;
+  int32 fee_structure_id = 3;
+  double total_amount = 4;
+  double paid_amount = 5;
+  string status = 6;     // pending / paid
+  string due_date = 7;
+}
+
+message StudentFeeListResponse {
+  repeated StudentFee fees = 1;
+}
+
+// Payment Options 
+message PaymentOptionsResponse {
+  repeated string options = 1;
+}
+
+// Initiate Payment 
+message InitiatePaymentRequest {
+  int32 student_fee_id = 1;
+  int32 student_id = 2;
+  string gateway = 3; // razorpay / offline
+}
+
+message InitiatePaymentResponse {
+  string order_id = 1;   // Razorpay order id
+  double amount = 2;
+  string currency = 3;
+  int32 payment_id = 4;
+  string message = 5;
+}
+
+// Verify Razorpay Payment
+message VerifyRazorpayRequest {
+  int32 payment_id = 1;
+  string razorpay_order_id = 2;
+  string razorpay_payment_id = 3;
+  string razorpay_signature = 4;
+}
+
+message VerifyRazorpayResponse {
+  string message = 1;
+  string receipt_url = 2;
+}
+
+// Simulate Razorpay 
+message SimulateRazorpayRequest {
+  int32 payment_id = 1;
+  string razorpay_order_id = 2;
+}
+
+message SimulateRazorpayResponse {
+  int32 payment_id = 1;
+  string razorpay_order_id = 2;
+  string razorpay_payment_id = 3;
+  string razorpay_signature = 4;
+}
+//fetch student details from student table
+message GetStudentRequest {
+  int32 student_id = 1;
+}
+
+message GetStudentResponse {
+  int32 id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string roll_number = 4;
+  string grade = 5;
+}
+
+message GenerateReceiptRequest {
+  int32 payment_id = 1;
+  int32 student_id = 2;
+  string student_name = 3;
+  string roll_number = 4;
+  string grade = 5;
+  string academic_year = 6;
+}
+
+message GenerateReceiptResponse {
+  string message = 1;
+  string receipt_url = 2;
+}

@@ -20,7 +20,11 @@ from django.db import transaction
 import csv
 from io import TextIOWrapper
 from .grpc_client import ExamGRPCClient
-
+from .payment_client import PaymentGRPCClient
+from django.utils import timezone
+from .permissions import IsStudent
+import grpc
+import payment_pb2
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 #viewset : allows multiple views within a single class
@@ -80,11 +84,25 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
+
+        # Save student instance first
         if user.is_superuser:
-            serializer.save()
+            student = serializer.save()
         else:
             teacher = Teacher.objects.filter(user=user).first()
-            serializer.save(assigned_teacher=teacher)
+            student = serializer.save(assigned_teacher=teacher)
+
+        try:
+            print("hi")
+            client = PaymentGRPCClient()
+            response = client.allocate_fee_for_student(
+                student_id=student.id,
+                grade=int(student.grade),
+                academic_year=student.academic_year
+            )
+            print(f"[gRPC] Fee allocation response: {response.message}")
+        except Exception as e:
+            print(f"[gRPC ERROR] Fee allocation failed for student {student.id}: {str(e)}")
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -373,3 +391,177 @@ class TeacherCreatedExamsView(APIView):
             return Response(exams, status=200)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
+
+class FeeAllocationView(APIView):
+    permission_classes = [permissions.IsAdminUser]  # only admin can allocate fee
+
+    def post(self, request):
+        # Extract raw data directly from request
+        data = request.data  
+
+        # Validate required fields manually
+        required_fields = ["grade", "academic_year", "base_fee", "due_date", "fine_per_day"]
+        missing = [field for field in required_fields if not data.get(field)]
+        if missing:
+            return Response(
+                {"error": f"Missing required fields: {', '.join(missing)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        client = PaymentGRPCClient()
+        try:
+            response = client.allocate_fee(
+                grade=data.get("grade"),
+                academic_year=data.get("academic_year"),
+                base_fee = float(data.get("base_fee")), 
+                due_date=data.get("due_date"),  # ensure date format matches model (yyyy-mm-dd)
+                fine_per_day = float(data.get("fine_per_day")),
+            )
+            return Response(
+                {"message": response.message},
+                status=status.HTTP_201_CREATED
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class InitiatePaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        student_fee_id = request.data.get("student_fee_id")
+        gateway = request.data.get("gateway")
+        print("hi")
+        if not student_fee_id or not gateway:
+            return Response(
+                {"error": "student_fee_id and gateway are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        print("User:", request.user)
+        print("Is student:", hasattr(request.user, "student"))
+        client = PaymentGRPCClient()
+        try:
+            response = client.initiate_payment(
+                student_fee_id=int(student_fee_id),
+                student_id=request.user.student.id,
+                gateway=gateway,
+            )
+            print("hi1")
+            return Response(
+                {
+                    "message": response.message,
+                    "payment_id": response.payment_id,
+                    "order_id": response.order_id,
+                    "amount": response.amount,
+                    "currency": response.currency,
+                },
+                status=status.HTTP_200_OK,
+                
+            )
+        
+        except grpc.RpcError as e:
+            return Response(
+                {"error": e.details()},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+class SimulateRazorpayPaymentView(APIView):
+    permission_classes = [IsAuthenticated, IsStudent]
+
+    def post(self, request):
+        payment_id = request.data.get("payment_id")
+        razorpay_order_id = request.data.get("razorpay_order_id")
+
+        if not payment_id or not razorpay_order_id:
+            return Response(
+                {"error": "payment_id and razorpay_order_id are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        client = PaymentGRPCClient()
+        try:
+            response = client.simulate_razorpay_payment(
+                payment_id=int(payment_id),
+                razorpay_order_id=razorpay_order_id
+            )
+            return Response({
+                "payment_id": response.payment_id,
+                "razorpay_order_id": response.razorpay_order_id,
+                "razorpay_payment_id": response.razorpay_payment_id,
+                "razorpay_signature": response.razorpay_signature
+            }, status=status.HTTP_200_OK)
+
+        except grpc.RpcError as e:
+            return Response(
+                {"error": e.details()},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class VerifyRazorpayPaymentView(APIView):
+    permission_classes = [IsAuthenticated, IsStudent]
+
+    def post(self, request):
+        payment_id = request.data.get("payment_id")
+        razorpay_order_id = request.data.get("razorpay_order_id")
+        razorpay_payment_id = request.data.get("razorpay_payment_id")
+        razorpay_signature = request.data.get("razorpay_signature")
+
+        if not all([payment_id, razorpay_order_id, razorpay_payment_id, razorpay_signature]):
+            return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
+
+        client = PaymentGRPCClient()
+        try:
+            response = client.verify_payment(
+                payment_id=int(payment_id),
+                razorpay_order_id=razorpay_order_id,
+                razorpay_payment_id=razorpay_payment_id,
+                razorpay_signature=razorpay_signature
+            )
+
+            if response.message != "Payment verified successfully":
+                return Response({"error": response.message}, status=status.HTTP_400_BAD_REQUEST)
+
+            student = request.user.student
+            receipt_response = client.generate_receipt(
+                payment_id=int(payment_id),
+                student=student
+            )
+
+            return Response(
+                {
+                    "message": receipt_response.message,
+                    "receipt_url": receipt_response.receipt_url
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except grpc.RpcError as e:
+            return Response({"error": e.details()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AttemptExamView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if not hasattr(user, "student"):
+            return Response({"error": "Only students can attempt exams"}, status=403)
+
+        exam_id = request.data.get("exam_id")
+        score = request.data.get("score")
+
+        if not exam_id or score is None:
+            return Response({"error": "exam_id and score are required"}, status=400)
+
+        client = ExamGRPCClient()
+        try:
+            response = client.attempt_exam(
+                exam_id=int(exam_id),
+                student_id=user.student.id,
+                score=float(score)
+            )
+            return Response({"message": response.message}, status=200)
+
+        except grpc.RpcError as e:
+            return Response({"error": e.details()}, status=500)

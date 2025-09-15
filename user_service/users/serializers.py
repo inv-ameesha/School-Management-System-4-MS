@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from rest_framework.exceptions import ValidationError, AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Teacher, Student
+from .models import Teacher, Student 
 
 class TeacherSerializer(serializers.ModelSerializer):
     #external fields of user table

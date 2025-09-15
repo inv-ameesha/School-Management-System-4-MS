@@ -1,4 +1,5 @@
 import grpc
+import exam_pb2
 from exam_pb2 import ExamRequest, CreateExamRequest , AssignExamRequest , StudentRequest , TeacherRequest
 from exam_pb2_grpc import ExamServiceStub
 from exam_pb2 import Empty
@@ -43,3 +44,12 @@ class ExamGRPCClient:
     def get_exams_by_teacher(self, teacher_id):
         request = TeacherRequest(teacher_id=teacher_id)
         return self.stub.GetExamsByTeacher(request)
+
+    
+    def attempt_exam(self, exam_id, student_id, score):
+        request = exam_pb2.AttemptExamRequest(
+            exam_id=exam_id,
+            student_id=student_id,
+            score=score
+        )
+        return self.stub.AttemptExam(request)

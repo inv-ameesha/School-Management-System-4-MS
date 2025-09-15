@@ -7,9 +7,12 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'exam_service.settings')
 django.setup()
 from concurrent import futures
 import time
-from .models import Exam,ExamAssignment
-from exam_pb2 import ExamResponse, ListExamsResponse, CreateExamResponse , AssignExamResponse
+from .models import Exam,ExamAssignment,StudentExamAttempt
+import exam_pb2
+import exam_pb2_grpc
+from exam_pb2 import ExamResponse, ListExamsResponse, CreateExamResponse , AssignExamResponse,AttemptExamResponse
 from exam_pb2_grpc import ExamServiceServicer, add_ExamServiceServicer_to_server
+from django.utils import timezone
 
 class ExamService(ExamServiceServicer):
     def GetExam(self, request, context):
@@ -151,6 +154,43 @@ class ExamService(ExamServiceServicer):
                 teacher_id=exam.teacher_id
             )
         return response
+
+    def AttemptExam(self, request, context):
+        try:
+            # Validate exam exists
+            try:
+                exam = Exam.objects.get(id=request.exam_id)
+            except Exam.DoesNotExist:
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                context.set_details("Exam not found")
+                return exam_pb2.AttemptExamResponse(message="Exam not found")
+
+            # Prevent duplicate submission
+            if StudentExamAttempt.objects.filter(
+                student_id=request.student_id,
+                exam=exam
+            ).exists():
+                context.set_code(grpc.StatusCode.ALREADY_EXISTS)
+                context.set_details("Exam already submitted")
+                return exam_pb2.AttemptExamResponse(message="Exam already submitted")
+
+            # Save attempt
+            StudentExamAttempt.objects.create(
+                student_id=request.student_id,
+                exam=exam,
+                score=request.score,
+                started_at=timezone.now()
+                submitted=1
+            )
+
+            return exam_pb2.AttemptExamResponse(
+                message="Exam submitted successfully"
+            )
+
+        except Exception as e:
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return exam_pb2.AttemptExamResponse(message="Error submitting exam")
 
 def serve():
     try:

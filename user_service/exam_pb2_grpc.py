@@ -64,6 +64,11 @@ class ExamServiceStub(object):
                 request_serializer=exam__pb2.TeacherRequest.SerializeToString,
                 response_deserializer=exam__pb2.ListExamsResponse.FromString,
                 _registered_method=True)
+        self.AttemptExam = channel.unary_unary(
+                '/exams.ExamService/AttemptExam',
+                request_serializer=exam__pb2.AttemptExamRequest.SerializeToString,
+                response_deserializer=exam__pb2.AttemptExamResponse.FromString,
+                _registered_method=True)
 
 
 class ExamServiceServicer(object):
@@ -105,6 +110,12 @@ class ExamServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AttemptExam(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ExamServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -137,6 +148,11 @@ def add_ExamServiceServicer_to_server(servicer, server):
                     servicer.GetExamsByTeacher,
                     request_deserializer=exam__pb2.TeacherRequest.FromString,
                     response_serializer=exam__pb2.ListExamsResponse.SerializeToString,
+            ),
+            'AttemptExam': grpc.unary_unary_rpc_method_handler(
+                    servicer.AttemptExam,
+                    request_deserializer=exam__pb2.AttemptExamRequest.FromString,
+                    response_serializer=exam__pb2.AttemptExamResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -301,6 +317,33 @@ class ExamService(object):
             '/exams.ExamService/GetExamsByTeacher',
             exam__pb2.TeacherRequest.SerializeToString,
             exam__pb2.ListExamsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AttemptExam(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/exams.ExamService/AttemptExam',
+            exam__pb2.AttemptExamRequest.SerializeToString,
+            exam__pb2.AttemptExamResponse.FromString,
             options,
             channel_credentials,
             insecure,
