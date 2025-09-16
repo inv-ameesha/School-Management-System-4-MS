@@ -90,3 +90,20 @@ class Receipt(models.Model):
 
     def __str__(self):
         return f"Receipt {self.receipt_number} - {self.student}"
+
+class TransactionLog(models.Model):
+    # payment = models.ForeignKey('Payment', on_delete=models.CASCADE, null=True, blank=True)
+    
+    log_message = models.TextField()
+    
+    LOG_TYPES = [
+        ('info', 'Info'),
+        ('error', 'Error'),
+        ('warning', 'Warning'),
+    ]
+    log_type = models.CharField(max_length=20, choices=LOG_TYPES, default='info')
+    
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Log {self.id} - {self.log_type}"

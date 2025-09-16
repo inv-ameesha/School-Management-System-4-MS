@@ -6,7 +6,7 @@ from payment_pb2 import InitiatePaymentRequest, InitiatePaymentResponse
 from payment_pb2 import SimulateRazorpayRequest, SimulateRazorpayResponse
 from payment_pb2 import AllocateFeeForStudentRequest, AllocateFeeForStudentResponse
 from payment_pb2 import GenerateReceiptRequest, GenerateReceiptResponse
-from payment_pb2 import StudentFeeRequest, StudentFeeListResponse
+from payment_pb2 import StudentFeeRequest, StudentFeeListResponse, ListTransactionLogsRequest
 import payment_pb2_grpc
 from payment_pb2_grpc import PaymentServiceStub
 
@@ -68,3 +68,7 @@ class PaymentGRPCClient:
             academic_year=str(student.academic_year)  
         )
         return self.stub.GenerateReceipt(request)
+
+    def list_logs(self):
+        request = payment_pb2.ListTransactionLogsRequest()
+        return self.stub.ListTransactionLogs(request)

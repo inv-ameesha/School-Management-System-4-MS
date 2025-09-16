@@ -13,10 +13,13 @@ service PaymentService {
   rpc SimulateRazorpayPayment(SimulateRazorpayRequest) returns (SimulateRazorpayResponse);
   rpc GetStudent(GetStudentRequest) returns (GetStudentResponse);
   rpc GenerateReceipt(GenerateReceiptRequest) returns (GenerateReceiptResponse);
+  rpc ListTransactionLogs (ListTransactionLogsRequest) returns (ListTransactionLogsResponse);
+
 }
 
 // Common 
 message Empty {}
+message ListTransactionLogsRequest {}
 
 //  Fee Allocation 
 message FeeAllocationRequest {
@@ -130,4 +133,15 @@ message GenerateReceiptRequest {
 message GenerateReceiptResponse {
   string message = 1;
   string receipt_url = 2;
+}
+
+message TransactionLog {
+  int32 id = 1;
+  string log_message = 2;
+  string log_type = 3;
+  string created_at = 4;
+}
+
+message ListTransactionLogsResponse {
+  repeated TransactionLog logs = 1;
 }

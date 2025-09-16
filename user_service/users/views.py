@@ -421,6 +421,10 @@ class FeeAllocationView(APIView):
                 {"message": response.message},
                 status=status.HTTP_201_CREATED
             )
+        except (ValueError, TypeError):
+            return Response({"error": "Invalid input"}, status=400)
+        except grpc.RpcError:
+            return Response({"error": "Service unavailable"}, status=502)
         except Exception as e:
             return Response(
                 {"error": str(e)},
@@ -439,8 +443,8 @@ class InitiatePaymentView(APIView):
                 {"error": "student_fee_id and gateway are required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        print("User:", request.user)
-        print("Is student:", hasattr(request.user, "student"))
+        # print("User:", request.user)
+        # print("Is student:", hasattr(request.user, "student"))
         client = PaymentGRPCClient()
         try:
             response = client.initiate_payment(
@@ -448,7 +452,6 @@ class InitiatePaymentView(APIView):
                 student_id=request.user.student.id,
                 gateway=gateway,
             )
-            print("hi1")
             return Response(
                 {
                     "message": response.message,
@@ -460,7 +463,6 @@ class InitiatePaymentView(APIView):
                 status=status.HTTP_200_OK,
                 
             )
-        
         except grpc.RpcError as e:
             return Response(
                 {"error": e.details()},
@@ -565,3 +567,24 @@ class AttemptExamView(APIView):
 
         except grpc.RpcError as e:
             return Response({"error": e.details()}, status=500)
+
+class TransactionLogView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            client = PaymentGRPCClient()
+            response = client.list_logs()
+
+            logs = [
+                {
+                    "id": log.id,
+                    "log_message": log.log_message,
+                    "log_type": log.log_type,
+                    "created_at": log.created_at,
+                }
+                for log in response.logs
+            ]
+            return Response(logs, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": f"Failed to fetch logs: {str(e)}"}, status=500)

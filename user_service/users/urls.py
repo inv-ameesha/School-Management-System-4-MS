@@ -29,4 +29,5 @@ urlpatterns = [
     path('pay/initiate/', InitiatePaymentView.as_view(), name='initiate-payment'),
     path("simulate/", SimulateRazorpayPaymentView.as_view(), name="simulate-payment"),
     path('pay/verify/', VerifyRazorpayPaymentView.as_view(), name='verify-payment'),
+    
 ]

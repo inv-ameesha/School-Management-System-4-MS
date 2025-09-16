@@ -80,6 +80,11 @@ class PaymentServiceStub(object):
                 request_serializer=payment__pb2.GenerateReceiptRequest.SerializeToString,
                 response_deserializer=payment__pb2.GenerateReceiptResponse.FromString,
                 _registered_method=True)
+        self.ListTransactionLogs = channel.unary_unary(
+                '/payment.PaymentService/ListTransactionLogs',
+                request_serializer=payment__pb2.ListTransactionLogsRequest.SerializeToString,
+                response_deserializer=payment__pb2.ListTransactionLogsResponse.FromString,
+                _registered_method=True)
 
 
 class PaymentServiceServicer(object):
@@ -140,6 +145,12 @@ class PaymentServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ListTransactionLogs(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_PaymentServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -187,6 +198,11 @@ def add_PaymentServiceServicer_to_server(servicer, server):
                     servicer.GenerateReceipt,
                     request_deserializer=payment__pb2.GenerateReceiptRequest.FromString,
                     response_serializer=payment__pb2.GenerateReceiptResponse.SerializeToString,
+            ),
+            'ListTransactionLogs': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListTransactionLogs,
+                    request_deserializer=payment__pb2.ListTransactionLogsRequest.FromString,
+                    response_serializer=payment__pb2.ListTransactionLogsResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -433,6 +449,33 @@ class PaymentService(object):
             '/payment.PaymentService/GenerateReceipt',
             payment__pb2.GenerateReceiptRequest.SerializeToString,
             payment__pb2.GenerateReceiptResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListTransactionLogs(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/payment.PaymentService/ListTransactionLogs',
+            payment__pb2.ListTransactionLogsRequest.SerializeToString,
+            payment__pb2.ListTransactionLogsResponse.FromString,
             options,
             channel_credentials,
             insecure,
