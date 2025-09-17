@@ -13,6 +13,7 @@ import exam_pb2_grpc
 from exam_pb2 import ExamResponse, ListExamsResponse, CreateExamResponse , AssignExamResponse,AttemptExamResponse
 from exam_pb2_grpc import ExamServiceServicer, add_ExamServiceServicer_to_server
 from django.utils import timezone
+from messaging.publisher import publish_event
 
 class ExamService(ExamServiceServicer):
     def GetExam(self, request, context):
@@ -60,39 +61,17 @@ class ExamService(ExamServiceServicer):
         return response
 
     def CreateExam(self, request, context):
-        # Prepare data for serializer
-        exam_data = {
-            'title': request.title,
-            'subject': request.subject,
-            'date': request.date,
-            'duration': request.duration,
-        }
-
-        # Resolve teacher object
         try:
-            teacher = Teacher.objects.get(id=request.teacher_id)
-        except Teacher.DoesNotExist:
-            context.set_code(grpc.StatusCode.NOT_FOUND)
-            context.set_details("Teacher not found")
-            return CreateExamResponse()
-
-        #  serializer for validation and creation
-        serializer = ExamSerializer(data=exam_data, context={'request': None})
-        serializer.initial_data['teacher'] = teacher  # inject teacher object
-
-        # Validate input
-        try:
-            serializer.is_valid(raise_exception=True)
-        except ValidationError as e:
-            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details(str(e))
-            return CreateExamResponse()
-
-        try:
-            exam = serializer.save()
+            exam = Exam.objects.create(
+                title=request.title,
+                subject=request.subject,
+                date=request.date,
+                duration=request.duration,
+                teacher_id=request.teacher_id            
+            )
             return CreateExamResponse(exam_id=exam.id, message="Exam created successfully")
         except Exception as e:
-            logging.error(f"Error creating exam: {e}")
+            logging.error(f"Error in CreateExam: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return CreateExamResponse()
@@ -117,6 +96,15 @@ class ExamService(ExamServiceServicer):
                 skipped.append(sid)
                 logging.error(f"Error assigning exam {exam.id} to student {sid}: {e}")
                 continue
+
+        # After all assignments, publish event
+        if assigned_count > 0:
+            publish_event({
+                "event": "students_allocated",
+                "exam_id": exam.id,
+                "student_ids": list(request.student_ids),
+                "message": f"{assigned_count} students allocated to exam {exam.id}"
+            })
 
         message = f"Exam assigned to {assigned_count} students."
         if skipped:
@@ -179,7 +167,7 @@ class ExamService(ExamServiceServicer):
                 student_id=request.student_id,
                 exam=exam,
                 score=request.score,
-                started_at=timezone.now()
+                started_at=timezone.now(),
                 submitted=1
             )
 

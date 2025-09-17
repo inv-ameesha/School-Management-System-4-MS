@@ -51,3 +51,12 @@ class StudentAnswer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     selected_option = models.CharField(max_length=1, choices=[('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D')])
 
+class Notification(models.Model):
+    student = models.IntegerField()
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    exam = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} for {self.student}"

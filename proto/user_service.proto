@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package user_service;
+
+service UserService {
+  rpc GetStudentsByIds(GetStudentsRequest) returns (GetStudentsResponse);
+}
+
+
+message GetStudentsRequest {
+  repeated int32 student_ids = 1;
+}
+
+message GetStudentsResponse {
+  repeated Student students = 1;
+}
+
+message Student {
+  int32 student_id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string email = 4;
+  int32 grade = 5;
+}

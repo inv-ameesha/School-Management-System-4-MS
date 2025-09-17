@@ -51,7 +51,7 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                     fee_structure.save()
             
                 TransactionLog.objects.create(
-                    log_message=f"FeeStructure created/updated for grade {grade}"
+                    log_message=f"FeeStructure created/updated for grade {grade}",
                     log_type="info"
                 )
             # Allocate to students of that grade
@@ -90,6 +90,16 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 grade=int(request.grade),
                 academic_year=request.academic_year
             )
+            try:
+                validate_student_fee(request.student_id, fee_structure)
+            except ValidationError as ve:
+                TransactionLog.objects.create(
+                    log_message=f"Fee allocation failed validation for student {request.student_id}: {str(ve)}",
+                    log_type="error"
+                )
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                context.set_details(str(ve))
+                return AllocateFeeForStudentResponse(message=str(ve))
 
             student_fee = StudentFee.objects.create(
                 student_id=request.student_id,  
@@ -122,10 +132,18 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 message=f"Fee allocated for student {request.student_id}"
             )
         except FeeStructure.DoesNotExist:
+            TransactionLog.objects.create(
+                log_message=f"Fee structure not found for grade={request.grade}, year={request.academic_year}",
+                log_type="error"
+            )
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details("No FeeStructure for grade/year")
             return AllocateFeeForStudentResponse(message="Fee structure not found")
         except Exception as e:
+            TransactionLog.objects.create(
+                log_message=f"Unexpected error during fee allocation for student {request.student_id}: {str(e)}",
+                log_type="error"
+            )
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return AllocateFeeForStudentResponse(message="Fee allocation failed")
@@ -388,10 +406,10 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 TransactionLog.objects.create(
                     log_message=f"Payment record not found for payment_id={request.payment_id}",
                     log_type="error"
-            )
-            context.set_code(grpc.StatusCode.NOT_FOUND)
-            context.set_details("Payment record not found")
-            return payment_pb2.GenerateReceiptResponse()
+                )
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                context.set_details("Payment record not found")
+                return payment_pb2.GenerateReceiptResponse()
             
 
             student_name = request.student_name
@@ -422,10 +440,10 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 c.showPage()
                 c.save()
 
-            TransactionLog.objects.create(
-                log_message=f"Receipt PDF generated at {file_path}",
-                log_type="info"
-            )
+                TransactionLog.objects.create(
+                    log_message=f"Receipt PDF generated at {file_path}",
+                    log_type="info"
+                )
             except Exception as e:
                 TransactionLog.objects.create(
                     log_message=f"Receipt PDF generation failed: {str(e)}",

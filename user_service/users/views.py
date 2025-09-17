@@ -93,7 +93,6 @@ class StudentViewSet(viewsets.ModelViewSet):
             student = serializer.save(assigned_teacher=teacher)
 
         try:
-            print("hi")
             client = PaymentGRPCClient()
             response = client.allocate_fee_for_student(
                 student_id=student.id,
