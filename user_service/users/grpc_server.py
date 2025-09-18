@@ -29,12 +29,14 @@ class UserServiceServicer(user_pb2_grpc.UserServiceServicer):
         except Exception as e:
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"Failed to fetch students: {str(e)}")
-            return user_pb2.GetStudentsResponse()
+            return user_service_pb2.GetStudentsResponse()
 
 def serve():
+    #creates grpc server instance with a thread pool of 10 workers
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    #helper function links the servicer class to the server
     user_pb2_grpc.add_UserServiceServicer_to_server(UserServiceServicer(), server)
-    server.add_insecure_port('[::]:50053')
+    server.add_insecure_port('[::]:50053')#connection to port 50053
     server.start()
     print("UserService gRPC server running on port 50053...")
     server.wait_for_termination()

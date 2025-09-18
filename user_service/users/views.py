@@ -326,7 +326,7 @@ class AssignExamView(APIView):
         exam_id = request.data.get("exam_id")
         student_ids = request.data.get("student_ids")  # expected list of IDs
 
-        if not exam_id or not isinstance(student_ids, list) or not student_ids:
+        if not exam_id or not isinstance(student_ids, list) or not student_ids:#not list or empty list
             return Response(
                 {"error": "exam_id and student_ids (list) are required"},
                 status=status.HTTP_400_BAD_REQUEST

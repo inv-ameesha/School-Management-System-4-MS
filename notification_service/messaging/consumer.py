@@ -7,9 +7,7 @@ import sys
 from email.message import EmailMessage
 import grpc
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-print("Updated sys.path:", sys.path)
-import user_service_pb2
-import user_service_pb2_grpc
+from notification_service import user_service_pb2 as user_pb2, user_service_pb2_grpc as user_pb2_grpc
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "notification_service.notification_service.settings")
 django.setup()
@@ -23,9 +21,9 @@ def send_email(to_email, subject, body):
         msg['From'] = 'ameesha468@gmail.com'
         msg['To'] = to_email
         msg.set_content(body)
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:#SMTP server by domain name and port
             server.starttls()
-            server.login('your_email@gmail.com', 'your_app_specific_password')  # Replace with valid credentials
+            server.login('ameesha468@gmail.com', 'pcnh tdoh elvb lety')  
             server.send_message(msg)
         print(f"Email sent to {to_email}")
     except Exception as e:
@@ -64,10 +62,10 @@ def callback(ch, method, properties, body):
     except Exception as e:
         print(f"Error processing message: {e}")
 
-connection = pika.BlockingConnection(pika.ConnectionParameters(RABBITMQ_HOST))
+connection = pika.BlockingConnection(pika.ConnectionParameters(RABBITMQ_HOST))#rabbitmq connnection
 channel = connection.channel()
 channel.exchange_declare(exchange="exam_events", exchange_type="fanout")
-channel.queue_declare(queue="notification_service")
+channel.queue_declare(queue="notification_service")#q declaration
 channel.queue_bind(exchange="exam_events", queue="notification_service")
 channel.basic_consume(queue="notification_service", on_message_callback=callback, auto_ack=True)
 

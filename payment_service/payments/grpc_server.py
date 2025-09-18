@@ -21,7 +21,7 @@ from reportlab.pdfgen import canvas
 from payments.models import Receipt
 from datetime import datetime
 from payments.validators import validate_fee_structure_data,validate_student_fee,validate_payment
-from django.db import IntegrityError, DatabaseError, OperationalError
+from django.db import IntegrityError, DatabaseError, OperationalError , ValidationError
 
 class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
     def AllocateFee(self, request, context):

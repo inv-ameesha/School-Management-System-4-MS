@@ -26,5 +26,3 @@ def validate_payment(student_fee, gateway, amount):
         raise ValidationError("Invalid StudentFee reference")
     if gateway not in ["razorpay", "offline"]:
         raise ValidationError(f"Unsupported gateway: {gateway}")
-    if amount <= 0:
-        raise ValidationError("Payment amount must be greater than 0")

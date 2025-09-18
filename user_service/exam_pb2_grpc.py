@@ -51,9 +51,9 @@ class ExamServiceStub(object):
                 _registered_method=True)
         self.AssignExam = channel.unary_unary(
                 '/exams.ExamService/AssignExam',
-                request_serializer=exam__pb2.AssignExamRequest.SerializeToString,
+                request_serializer=exam__pb2.AssignExamRequest.SerializeToString,#serializes the request to be sent to server to protobuf wire format
                 response_deserializer=exam__pb2.AssignExamResponse.FromString,
-                _registered_method=True)
+                _registered_method=True)#makes it a registered RPC call
         self.GetExamsByStudent = channel.unary_unary(
                 '/exams.ExamService/GetExamsByStudent',
                 request_serializer=exam__pb2.StudentRequest.SerializeToString,

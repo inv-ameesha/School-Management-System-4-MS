@@ -77,8 +77,9 @@ class ExamService(ExamServiceServicer):
             return CreateExamResponse()
     
     def AssignExam(self, request, context):
+        #context = rpc call state
         try:
-            exam = Exam.objects.get(id=request.exam_id)
+            exam = Exam.objects.get(id=request.exam_id)#model exist here
         except Exam.DoesNotExist:
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details("Exam not found")
@@ -94,7 +95,7 @@ class ExamService(ExamServiceServicer):
                 assigned_count += 1
             except Exception as e:
                 skipped.append(sid)
-                logging.error(f"Error assigning exam {exam.id} to student {sid}: {e}")
+                # logging.error(f"Error assigning exam {exam.id} to student {sid}: {e}")
                 continue
 
         # After all assignments, publish event
