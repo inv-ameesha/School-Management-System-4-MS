@@ -8,7 +8,7 @@ import django, os
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "user_service.settings")
 django.setup()
 
-from .models import Student
+from .models import Student,Teacher
 
 class UserServiceServicer(user_pb2_grpc.UserServiceServicer):
     def GetStudentsByIds(self, request, context):
@@ -30,6 +30,20 @@ class UserServiceServicer(user_pb2_grpc.UserServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"Failed to fetch students: {str(e)}")
             return user_service_pb2.GetStudentsResponse()
+        
+class UserServiceServicer(user_pb2_grpc.UserServiceServicer):
+    def GetTeacherByUserId(self, request, context):
+        try:
+            teacher = Teacher.objects.get(user_id=request.user_id)
+            return user_service_pb2.GetTeacherResponse(
+                # found=True,
+                teacher_id=teacher.id,
+                first_name=teacher.first_name,
+                last_name=teacher.last_name,
+                email=teacher.email
+            )
+        except Teacher.DoesNotExist:
+            return user_service_pb2.GetTeacherResponse(found=False)
 
 def serve():
     #creates grpc server instance with a thread pool of 10 workers

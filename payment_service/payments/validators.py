@@ -21,8 +21,14 @@ def validate_student_fee(student_id, fee_structure):
     if not isinstance(fee_structure, FeeStructure):
         raise ValidationError("Invalid FeeStructure reference")
 
-def validate_payment(student_fee, gateway, amount):
+def validate_payment(student_fee, gateway):
     if not isinstance(student_fee, StudentFee):
         raise ValidationError("Invalid StudentFee reference")
     if gateway not in ["razorpay", "offline"]:
         raise ValidationError(f"Unsupported gateway: {gateway}")
+    
+def validate_simulate_payment(payment_id, razorpay_order_id):
+    if payment_id is None or payment_id <= 0:
+        raise ValidationError("Payment ID must be a valid positive integer")
+    if not razorpay_order_id or not isinstance(razorpay_order_id, str):
+        raise ValidationError("razorpay_order_id must be a valid non-empty string")

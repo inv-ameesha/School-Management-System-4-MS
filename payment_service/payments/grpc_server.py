@@ -21,7 +21,8 @@ from reportlab.pdfgen import canvas
 from payments.models import Receipt
 from datetime import datetime
 from payments.validators import validate_fee_structure_data,validate_student_fee,validate_payment
-from django.db import IntegrityError, DatabaseError, OperationalError , ValidationError
+from django.db import IntegrityError, DatabaseError, OperationalError 
+from django.core.exceptions import ValidationError
 
 class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
     def AllocateFee(self, request, context):
@@ -154,6 +155,7 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 student_fee = StudentFee.objects.select_for_update().get(
                     id=request.student_fee_id, student_id=request.student_id
                 )
+                
                 if student_fee.lock == 1:
                     TransactionLog.objects.create(
                         log_message=f"Payment lock conflict for StudentFee {student_fee.id}",#f- fromatted string literal
@@ -300,8 +302,9 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
             context.set_details("Payment record not found")
             return payment_pb2.SimulateRazorpayResponse()
 
-        # generate fake payment ID
         try:
+            razorpay_payment_id = str(request.payment_id) 
+            razorpay_order_id = request.razorpay_order_id
             # generate signature
             msg = f"{razorpay_order_id}|{razorpay_payment_id}"
             generated_signature = hmac.new(
@@ -310,10 +313,13 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 hashlib.sha256
             ).hexdigest()
         except Exception as e:
-            return Response(
-                {"error": f"Failed to generate signature: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            TransactionLog.objects.create(
+                log_message=f"Signature generation failed: {str(e)}",
+                log_type="error"
             )
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(f"Failed to generate signature: {str(e)}")
+            return payment_pb2.SimulateRazorpayResponse()
 
         TransactionLog.objects.create(
             log_message=f"Simulated Razorpay payment generated. razorpay_payment_id={razorpay_payment_id}",

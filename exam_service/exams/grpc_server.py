@@ -115,6 +115,8 @@ class ExamService(ExamServiceServicer):
 
     def GetExamsByStudent(self, request, context):
         response = ListExamsResponse()
+        import pdb; pdb.set_trace()
+        # print("dat fetched")
         assignments = ExamAssignment.objects.filter(student_id=request.student_id)
 
         for assignment in assignments:

@@ -46,52 +46,14 @@ class TeacherViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class StudentViewSet(viewsets.ModelViewSet):
-    serializer_class = StudentSerializer
     queryset = Student.objects.all()
-
-    def get_permissions(self):#self:instance of that cls for actions like self.request,self.action etc
-        user = self.request.user
-        if self.action == 'me':
-            return [IsAuthenticated()]
-        if self.request.method == 'GET':
-            if user.is_superuser:
-                return [IsAdminUser()]
-            elif Student.objects.filter(user=user).exists():
-                return [IsAuthenticated()]  # Allow student to access own details
-            else:
-                return [IsTeacher()]
-        if self.request.method == 'POST':
-            return [IsAdminUser()] if user.is_superuser else [IsTeacher()]
-        if self.request.method in ['PUT', 'PATCH']:
-            return [IsAdminUser()] if user.is_superuser else [IsTeacher()]
-        if self.request.method == 'DELETE':
-            return [IsAdminUser()]
-        return [IsAdminUser()]
-
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_superuser:
-            return Student.objects.all()
-        elif Teacher.objects.filter(user=user).exists():
-            teacher = Teacher.objects.get(user=user)
-            return Student.objects.filter(assigned_teacher=teacher)
-        elif Student.objects.filter(user=user).exists():
-            student = Student.objects.get(user=user)
-            return Student.objects.filter(id=student.id)
-        else:
-            return Student.objects.none()
-        return Student.objects.none()
+    serializer_class = StudentSerializer
+    permission_classes = [IsAdminUser]  # Only admin can do anything
 
     def perform_create(self, serializer):
-        user = self.request.user
+        student = serializer.save()
 
-        # Save student instance first
-        if user.is_superuser:
-            student = serializer.save()
-        else:
-            teacher = Teacher.objects.filter(user=user).first()
-            student = serializer.save(assigned_teacher=teacher)
-
+        # gRPC fee allocation
         try:
             client = PaymentGRPCClient()
             response = client.allocate_fee_for_student(
@@ -103,70 +65,15 @@ class StudentViewSet(viewsets.ModelViewSet):
         except Exception as e:
             print(f"[gRPC ERROR] Fee allocation failed for student {student.id}: {str(e)}")
 
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        user = request.user
-
-        if user.is_superuser:
-            return super().retrieve(request, *args, **kwargs)
-
-        if Teacher.objects.filter(user=user).exists():
-            teacher = Teacher.objects.get(user=user)
-            if instance.assigned_teacher == teacher:
-                return super().retrieve(request, *args, **kwargs)
-            return Response({"detail": "You do not have permission to access this student."}, status=403)
-
-        if Student.objects.filter(user=user).exists():
-            student = Student.objects.get(user=user)
-            if instance.id == student.id:
-                return super().retrieve(request, *args, **kwargs)
-            return Response({"detail": "You do not have permission to access this student."}, status=403)
-
-        return Response({"detail": "Permission denied."}, status=403)
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        user = request.user
-
-        if user.is_superuser:
-            return super().update(request, *args, **kwargs)
-
-        if Teacher.objects.filter(user=user).exists():
-            teacher = Teacher.objects.get(user=user)
-            if instance.assigned_teacher == teacher:
-                return super().update(request, *args, **kwargs)
-            return Response({"detail": "You do not have permission to edit this student."}, status=403)
-
-        return Response({"detail": "Permission denied."}, status=403)
-
     def destroy(self, request, *args, **kwargs):
-        if not request.user.is_superuser:
-            return Response({"detail": "Only admin can delete students."}, status=403)
-        student = Student.objects.get(pk=kwargs['pk'])
+        student = self.get_object()
         student.status = 'Inactive'
-        email_address = student.email
-        tag = str(datetime.now())
-        new_email_address = email_address.replace("@", tag + "@")
-        student.email=new_email_address
-        print(new_email_address)
+
+        tag = str(datetime.now().timestamp())
+        student.email = student.email.replace("@", f"{tag}@")
         student.save()
-        return Response({"detail": "deleted."}, status=202)
 
-    @action(detail=False, methods=['get'], url_path='me', permission_classes=[IsAuthenticated])
-    def me(self, request):
-        student = Student.objects.filter(user=request.user).first()
-        if not student:
-            return Response({'detail': 'Student profile not found'}, status=404)
-        serializer = self.get_serializer(student)
-        return Response(serializer.data)
-
-    @action(detail=False, methods=['get'], url_path='by-teacher/(?P<teacher_id>[^/.]+)')
-    def by_teacher(self, request, teacher_id=None):
-        if not request.user.is_superuser:
-            return Response({'detail': 'Permission denied'}, status=403)
-        students = Student.objects.filter(assigned_teacher_id=teacher_id)
-        serializer = self.get_serializer(students, many=True)
-        return Response(serializer.data)
+        return Response({"detail": "Student soft-deleted."}, status=202)
 
 class ImportStudentsCSV(APIView):
     parser_classes = [MultiPartParser]
