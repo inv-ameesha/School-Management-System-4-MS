@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12user_service.proto\x12\x0cuser_service\")\n\x12GetStudentsRequest\x12\x13\n\x0bstudent_ids\x18\x01 \x03(\x05\">\n\x13GetStudentsResponse\x12\'\n\x08students\x18\x01 \x03(\x0b\x32\x15.user_service.Student\"b\n\x07Student\x12\x12\n\nstudent_id\x18\x01 \x01(\x05\x12\x12\n\nfirst_name\x18\x02 \x01(\t\x12\x11\n\tlast_name\x18\x03 \x01(\t\x12\r\n\x05\x65mail\x18\x04 \x01(\t\x12\r\n\x05grade\x18\x05 \x01(\x05\"$\n\x11GetTeacherRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\x05\"^\n\x12GetTeacherResponse\x12\x12\n\nteacher_id\x18\x02 \x01(\x05\x12\x12\n\nfirst_name\x18\x03 \x01(\t\x12\x11\n\tlast_name\x18\x04 \x01(\t\x12\r\n\x05\x65mail\x18\x05 \x01(\t2\xbf\x01\n\x0bUserService\x12W\n\x10GetStudentsByIds\x12 .user_service.GetStudentsRequest\x1a!.user_service.GetStudentsResponse\x12W\n\x12GetTeacherByUserId\x12\x1f.user_service.GetTeacherRequest\x1a .user_service.GetTeacherResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12user_service.proto\x12\x0cuser_service\")\n\x12GetStudentsRequest\x12\x13\n\x0bstudent_ids\x18\x01 \x03(\x05\">\n\x13GetStudentsResponse\x12\'\n\x08students\x18\x01 \x03(\x0b\x32\x15.user_service.Student\"b\n\x07Student\x12\x12\n\nstudent_id\x18\x01 \x01(\x05\x12\x12\n\nfirst_name\x18\x02 \x01(\t\x12\x11\n\tlast_name\x18\x03 \x01(\t\x12\r\n\x05\x65mail\x18\x04 \x01(\t\x12\r\n\x05grade\x18\x05 \x01(\x05\"$\n\x11GetTeacherRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\x05\"^\n\x12GetTeacherResponse\x12\x12\n\nteacher_id\x18\x02 \x01(\x05\x12\x12\n\nfirst_name\x18\x03 \x01(\t\x12\x11\n\tlast_name\x18\x04 \x01(\t\x12\r\n\x05\x65mail\x18\x05 \x01(\t\"*\n\x17GetStudentByUserRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\x05\"B\n\x18GetStudentByUserResponse\x12&\n\x07student\x18\x01 \x01(\x0b\x32\x15.user_service.Student2\xa4\x02\n\x0bUserService\x12W\n\x10GetStudentsByIds\x12 .user_service.GetStudentsRequest\x1a!.user_service.GetStudentsResponse\x12W\n\x12GetTeacherByUserId\x12\x1f.user_service.GetTeacherRequest\x1a .user_service.GetTeacherResponse\x12\x63\n\x12GetStudentByUserId\x12%.user_service.GetStudentByUserRequest\x1a&.user_service.GetStudentByUserResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -41,6 +41,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GETTEACHERREQUEST']._serialized_end=279
   _globals['_GETTEACHERRESPONSE']._serialized_start=281
   _globals['_GETTEACHERRESPONSE']._serialized_end=375
-  _globals['_USERSERVICE']._serialized_start=378
-  _globals['_USERSERVICE']._serialized_end=569
+  _globals['_GETSTUDENTBYUSERREQUEST']._serialized_start=377
+  _globals['_GETSTUDENTBYUSERREQUEST']._serialized_end=419
+  _globals['_GETSTUDENTBYUSERRESPONSE']._serialized_start=421
+  _globals['_GETSTUDENTBYUSERRESPONSE']._serialized_end=487
+  _globals['_USERSERVICE']._serialized_start=490
+  _globals['_USERSERVICE']._serialized_end=782
 # @@protoc_insertion_point(module_scope)

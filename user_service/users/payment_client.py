@@ -15,7 +15,7 @@ class PaymentGRPCClient:
         self.channel = grpc.insecure_channel(f"{host}:{port}")
         self.stub = payment_pb2_grpc.PaymentServiceStub(self.channel)
 
-    def allocate_fee(self, grade, academic_year, base_fee, due_date, fine_per_day, description=""):
+    def allocate_fee(self, grade, academic_year, base_fee, due_date, fine_per_day):
         request = payment_pb2.FeeAllocationRequest(
             grade=str(grade),
             academic_year=academic_year,

@@ -27,54 +27,44 @@ from django.core.exceptions import ValidationError
 class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
     def AllocateFee(self, request, context):
         try:
-            # Extract fields from gRPC request
             grade = request.grade
             academic_year = request.academic_year
             base_fee = request.base_fee
-            due_date = request.due_date
             fine_per_day = request.fine_per_day
 
+            # Convert due_date string to date if needed
+            if isinstance(request.due_date, str):
+                due_date = datetime.strptime(request.due_date, "%Y-%m-%d").date()
+            else:
+                due_date = request.due_date
+
+            # Now safe to use in ORM and comparisons
             validate_fee_structure_data(grade, academic_year, base_fee, due_date, fine_per_day)
-            try:
-                fee_structure, created = FeeStructure.objects.get_or_create(
-                    grade=grade,
-                    academic_year=academic_year,
-                    defaults={#new values
-                        "base_fee": base_fee,
-                        "due_date": due_date,
-                        "fine_per_day": fine_per_day,
-                    }#if created already then created=false else true
-                )
-                if not created:
-                    fee_structure.base_fee = base_fee
-                    fee_structure.due_date = due_date
-                    fee_structure.fine_per_day = fine_per_day
-                    fee_structure.save()
-            
-                TransactionLog.objects.create(
-                    log_message=f"FeeStructure created/updated for grade {grade}",
-                    log_type="info"
-                )
-            # Allocate to students of that grade
-            # students = Student.objects.filter(grade=grade, academic_year=academic_year)
-            # for student in students:
-            #     StudentFee.objects.get_or_create(
-            #         student=student,
-            #         fee_structure=fee_structure
-            #     )
 
-                return payment_pb2.FeeAllocationResponse(
-                    message=f"Fee allocated successfully for grade {grade}, year {academic_year}"
-                )
+            fee_structure, created = FeeStructure.objects.get_or_create(
+                grade=grade,
+                academic_year=academic_year,
+                defaults={
+                    "base_fee": base_fee,
+                    "due_date": due_date,
+                    "fine_per_day": fine_per_day,
+                }
+            )
 
-            except (DatabaseError, OperationalError):
-                TransactionLog.objects.create(
-                    log_message="Database error during fee allocation",
-                    log_type="error"
-                )
-                context.set_code(grpc.StatusCode.UNAVAILABLE)
-                context.set_details("Database error occurred")
-                return payment_pb2.FeeAllocationResponse(message="Database error")
+            if not created:
+                fee_structure.base_fee = base_fee
+                fee_structure.due_date = due_date
+                fee_structure.fine_per_day = fine_per_day
+                fee_structure.save()
+
+            TransactionLog.objects.create(
+                log_message=f"FeeStructure created/updated for grade {grade}",
+                log_type="info"
+            )
+
+            return payment_pb2.FeeAllocationResponse(
+                message=f"Fee allocated successfully for grade {grade}, year {academic_year}"
+            )
 
         except Exception as e:
             TransactionLog.objects.create(
@@ -84,7 +74,7 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return payment_pb2.FeeAllocationResponse(message="Fee allocation failed")
-
+        
     def AllocateFeeForStudent(self, request, context):
         try:
             fee_structure = FeeStructure.objects.get(
@@ -525,3 +515,7 @@ def serve():
 
 if __name__ == "__main__":
     serve()
+
+
+from payments.payment_client import PaymentGRPCClient
+

@@ -100,4 +100,22 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         return data
 
+    @classmethod
+    def get_token(cls, user):
+        """Add extra claims to the token payload so other services can identify
+        the teacher_id or student_id without an extra gRPC lookup.
+        """
+        token = super().get_token(user)
+        try:
+            if hasattr(user, 'teacher') and user.teacher is not None:
+                token['teacher_id'] = int(user.teacher.id)
+        except Exception:
+            pass
+        try:
+            if hasattr(user, 'student') and user.student is not None:
+                token['student_id'] = int(user.student.id)
+        except Exception:
+            pass
+        return token
+
 

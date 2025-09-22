@@ -5,11 +5,13 @@ package user_service;
 service UserService {
   rpc GetStudentsByIds(GetStudentsRequest) returns (GetStudentsResponse);
   rpc GetTeacherByUserId(GetTeacherRequest) returns (GetTeacherResponse);
+  rpc GetStudentByUserId(GetStudentByUserRequest) returns (GetStudentByUserResponse);
+  rpc GetStudentsByGradeYear(GetStudentsByGradeYearRequest) returns (GetStudentsByGradeYearResponse);
 }
 
 
 message GetStudentsRequest {
-  repeated int32 student_ids = 1;
+  repeated int32 user_id = 1;
 }
 
 message GetStudentsResponse {
@@ -22,6 +24,7 @@ message Student {
   string last_name = 3;
   string email = 4;
   int32 grade = 5;
+  string academic_year = 6;
 }
 
 message GetTeacherRequest {
@@ -33,4 +36,21 @@ message GetTeacherResponse {
   string first_name = 3;
   string last_name = 4;
   string email = 5;
+}
+
+message GetStudentByUserRequest {
+  int32 user_id = 1;
+}
+
+message GetStudentByUserResponse {
+  Student student = 1;
+}
+
+message GetStudentsByGradeYearRequest {
+  int32 grade = 1;
+  string academic_year = 2;
+}
+
+message GetStudentsByGradeYearResponse {
+  repeated Student students = 1;
 }

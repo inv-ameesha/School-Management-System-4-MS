@@ -8,7 +8,8 @@ import django, os
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "user_service.settings")
 django.setup()
 
-from .models import Student,Teacher
+from .models import Student, Teacher
+
 
 class UserServiceServicer(user_pb2_grpc.UserServiceServicer):
     def GetStudentsByIds(self, request, context):
@@ -30,20 +31,60 @@ class UserServiceServicer(user_pb2_grpc.UserServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"Failed to fetch students: {str(e)}")
             return user_service_pb2.GetStudentsResponse()
-        
-class UserServiceServicer(user_pb2_grpc.UserServiceServicer):
+
     def GetTeacherByUserId(self, request, context):
         try:
+            # Teacher has a OneToOneField to User, Django creates `user_id` FK column
             teacher = Teacher.objects.get(user_id=request.user_id)
             return user_service_pb2.GetTeacherResponse(
-                # found=True,
                 teacher_id=teacher.id,
                 first_name=teacher.first_name,
                 last_name=teacher.last_name,
-                email=teacher.email
+                email=teacher.email,
             )
         except Teacher.DoesNotExist:
-            return user_service_pb2.GetTeacherResponse(found=False)
+            # Return a NOT_FOUND status and an empty response (no 'found' field in proto)
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details("Teacher not found")
+            return user_service_pb2.GetTeacherResponse()
+        
+    def GetStudentByUserId(self, request, context):
+        try:
+            student = Student.objects.filter(user_id=request.user_id)
+            return user_service_pb2.GetStudentByUserResponse(
+                student=user_service_pb2.Student(
+                    student_id=student.id,
+                    first_name=student.first_name,
+                    last_name=student.last_name,
+                    email=student.email,
+                    grade=student.grade if student.grade is not None else 0
+                )
+            )
+        except Student.DoesNotExist:
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details("Student not found")
+            return user_service_pb2.GetStudentByUserResponse()
+        except Exception as e:
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(f"Failed to fetch student: {str(e)}")
+            return user_service_pb2.GetStudentByUserResponse()
+        
+    def GetStudentsByGradeYear(self, request, context):
+        students_data = Student.objects.filter(grade=request.grade, academic_year=request.academic_year)
+        
+        students_proto = [
+            user_service_pb2.Student(
+                student_id=s.id,
+                first_name=s.first_name,
+                last_name=s.last_name,
+                email=s.email,
+                grade=s.grade,
+                academic_year=s.academic_year
+            )
+            for s in students_data
+        ]
+
+        return user_service_pb2.GetStudentsByGradeYearResponse(students=students_proto)
 
 def serve():
     #creates grpc server instance with a thread pool of 10 workers

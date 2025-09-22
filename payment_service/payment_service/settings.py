@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=yubd7#rn#x@k-cw2&v#8c1k-p@6my)+6cwjmq8n3*4edha7)&'
+SECRET_KEY = 'django-insecure-d*=)9_0%=swn!pbw!mcjw87#cc#ebwig#pea*9jlcrp0zzo)-o'
 load_dotenv()
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -70,6 +70,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'payment_service.wsgi.application'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'payment_service.auth.UserServiceJWTAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    )
+}
 
 
 # Database

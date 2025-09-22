@@ -23,7 +23,7 @@ message ListTransactionLogsRequest {}
 
 //  Fee Allocation 
 message FeeAllocationRequest {
-  string grade = 1;
+  int32 grade = 1;
   string academic_year = 2;
   double base_fee = 3;
   string due_date = 4;
