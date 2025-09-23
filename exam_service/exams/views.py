@@ -9,7 +9,7 @@ from .exam_client import ExamGRPCClient
 from rest_framework import permissions
 from .serializers import ExamSerializer, ExamAssignmentSerializer, StudentExamAttemptSerializer 
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 class ExamCreateView(APIView):
     permission_classes = [IsAuthenticated]

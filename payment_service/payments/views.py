@@ -83,6 +83,7 @@ class InitiatePaymentView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        
         student_fee_id = request.data.get("student_fee_id")
         gateway = request.data.get("gateway")
 
@@ -92,29 +93,27 @@ class InitiatePaymentView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user_client = UserGRPCClient()
-        try:
-            student_response = user_client.get_student_by_user(request.user.id)
-            if not student_response.found:
-                return Response(
-                    {"error": "Only students can initiate payments"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-            student_id = student_response.student_id
-
-        except grpc.RpcError as e:
+        if not hasattr(request.user, 'student') or not request.user.student:
+            print("ERROR: No student found in request.user")
             return Response(
-                {"error": f"user_service unavailable: {e.details()}"},
-                status=status.HTTP_502_BAD_GATEWAY,
+                {"error": "Only students can initiate payments"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
+        student_id = request.user.student.id
+        print(f"Using student_id: {student_id}")
+
+        # Test payment service connection first
         client = PaymentGRPCClient()
-        try:
+        try:   
             response = client.initiate_payment(
                 student_fee_id=int(student_fee_id),
                 student_id=student_id,
                 gateway=gateway,
             )
+            
+            print(f"Payment gRPC response: {response}")
+            
             return Response(
                 {
                     "message": response.message,
@@ -125,17 +124,23 @@ class InitiatePaymentView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
-
+            
         except grpc.RpcError as e:
+            print(f"Payment gRPC Error: {e.code()}: {e.details()}")
             return Response(
-                {"error": e.details()},
+                {"error": f"Payment service error: {e.details()}"},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
         except Exception as e:
+            print(f"Unexpected error: {type(e).__name__}: {str(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+        finally:
+            client.close()
         
 class SimulateRazorpayPaymentView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -168,10 +173,8 @@ class SimulateRazorpayPaymentView(APIView):
                 status=status.HTTP_502_BAD_GATEWAY
             )
 
-
 class VerifyRazorpayPaymentView(APIView):
     permission_classes = [permissions.IsAuthenticated] 
-    # If you want student only: [IsAuthenticated, IsStudent]
 
     def post(self, request):
         payment_id = request.data.get("payment_id")
@@ -182,11 +185,14 @@ class VerifyRazorpayPaymentView(APIView):
         if not all([payment_id, razorpay_order_id, razorpay_payment_id, razorpay_signature]):
             return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
 
-        pay_client = PaymentGRPCClient()
-        user_client = UserGRPCClient()  # fetch student info
+        if not hasattr(request.user, "student") or not request.user.student:
+            return Response({"error": "Only students can verify payments"}, status=403)
 
+        student_id = request.user.student.id
+        print(f"Using student_id: {student_id}")
+
+        pay_client = PaymentGRPCClient()
         try:
-            # Step 1: Verify payment
             verify_response = pay_client.verify_payment(
                 payment_id=int(payment_id),
                 razorpay_order_id=razorpay_order_id,
@@ -197,17 +203,6 @@ class VerifyRazorpayPaymentView(APIView):
             if verify_response.message != "Payment verified successfully":
                 return Response({"error": verify_response.message}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Step 2: Fetch student id from user_service
-            if not hasattr(request.user, "student"):
-                return Response({"error": "Only students can generate receipt"}, status=403)
-
-            student_id = request.user.student.id
-            student_resp = user_client.get_student_by_id(student_id)
-
-            if not student_resp.found:
-                return Response({"error": "Student not found"}, status=404)
-
-            # Step 3: Generate receipt
             receipt_response = pay_client.generate_receipt(
                 payment_id=int(payment_id),
                 student_id=student_id

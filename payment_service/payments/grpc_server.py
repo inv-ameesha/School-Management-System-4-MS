@@ -4,7 +4,6 @@ import time
 import os
 import django
 import hmac, hashlib
-# setup Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "payment_service.settings")
 django.setup()
 from django.conf import settings
@@ -23,6 +22,7 @@ from datetime import datetime
 from payments.validators import validate_fee_structure_data,validate_student_fee,validate_payment
 from django.db import IntegrityError, DatabaseError, OperationalError 
 from django.core.exceptions import ValidationError
+from user_client import UserGRPCClient
 
 class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
     def AllocateFee(self, request, context):
@@ -346,7 +346,6 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 context.set_details("Payment record not found")
                 return payment_pb2.VerifyRazorpayResponse()
 
-            # Verify signature
             client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
             try:
                 client.utility.verify_payment_signature({
@@ -408,10 +407,22 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 return payment_pb2.GenerateReceiptResponse()
             
 
-            student_name = request.student_name
-            roll_number = request.roll_number
-            grade = request.grade
-            academic_year = request.academic_year
+            user_client = UserGRPCClient()
+            student_resp = user_client.get_student_by_id(request.student_id)
+
+            if not student_resp.found:
+                TransactionLog.objects.create(
+                    log_message=f"Student not found for id={request.student_id}",
+                    log_type="error"
+                )
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                context.set_details("Student not found")
+                return payment_pb2.GenerateReceiptResponse()
+
+            student_name = f"{student_resp.first_name} {student_resp.last_name}"
+            roll_number = student_resp.roll_number
+            grade = student_resp.grade
+            academic_year = student_resp.academic_year
 
             try:
             # Generate PDF receipt

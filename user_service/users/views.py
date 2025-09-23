@@ -24,7 +24,8 @@ from .payment_client import PaymentGRPCClient
 from django.utils import timezone
 from .permissions import IsStudent
 import grpc
-import payment_pb2
+import pika
+import json
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 #viewset : allows multiple views within a single class
@@ -53,17 +54,29 @@ class StudentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         student = serializer.save()
 
-        # gRPC fee allocation
+        # Publish message to RabbitMQ instead of calling gRPC directly
         try:
-            client = PaymentGRPCClient()
-            response = client.allocate_fee_for_student(
-                student_id=student.id,
-                grade=int(student.grade),
-                academic_year=student.academic_year
+            connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+            channel = connection.channel()
+            channel.queue_declare(queue='student_fee_queue', durable=True)
+
+            message = {
+                "student_id": student.id,
+                "grade": student.grade,
+                "academic_year": student.academic_year,
+            }
+
+            channel.basic_publish(
+                exchange='',
+                routing_key='student_fee_queue',
+                body=json.dumps(message),
+                properties=pika.BasicProperties(delivery_mode=2)  # persistent
             )
-            print(f"[gRPC] Fee allocation response: {response.message}")
+            connection.close()
+
+            print(f"[RabbitMQ] Published student {student.id} for fee allocation.")
         except Exception as e:
-            print(f"[gRPC ERROR] Fee allocation failed for student {student.id}: {str(e)}")
+            print(f"[RabbitMQ ERROR] Failed to publish student {student.id}: {str(e)}")
 
     def destroy(self, request, *args, **kwargs):
         student = self.get_object()

@@ -7,8 +7,8 @@ service UserService {
   rpc GetTeacherByUserId(GetTeacherRequest) returns (GetTeacherResponse);
   rpc GetStudentByUserId(GetStudentByUserRequest) returns (GetStudentByUserResponse);
   rpc GetStudentsByGradeYear(GetStudentsByGradeYearRequest) returns (GetStudentsByGradeYearResponse);
+  rpc GetStudentById(GetStudentByIdRequest) returns (GetStudentByIdResponse);
 }
-
 
 message GetStudentsRequest {
   repeated int32 user_id = 1;
@@ -53,4 +53,13 @@ message GetStudentsByGradeYearRequest {
 
 message GetStudentsByGradeYearResponse {
   repeated Student students = 1;
+}
+
+message GetStudentByIdRequest {
+  int32 student_id = 1;
+}
+
+message GetStudentByIdResponse {
+  bool found = 1;
+  Student student = 2;
 }
