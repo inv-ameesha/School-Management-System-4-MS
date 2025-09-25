@@ -1,34 +1,30 @@
 from datetime import datetime
 import traceback
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status, permissions
 import grpc
 from .payment_client import PaymentGRPCClient
 from .user_client import UserGRPCClient      
 import logging
-import pdb
+import traceback
+from .serializers import (
+    FeeAllocationSerializer,    
+    InitiatePaymentSerializer,
+    SimulateRazorpayPaymentSerializer,
+)
+from .permission import  IsStudent , IsAdminUser
 
 logger = logging.getLogger(__name__)
 
 class FeeAllocationView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
+    permission_classes = [IsAdminUser]
+    serializer_class = FeeAllocationSerializer
     def post(self, request):
         user = request.user
         data = request.data
         # pdb.set_trace()
-        logger.info("Received data: %s", data)
-        print("hi")
-        required_fields = ["grade", "academic_year", "base_fee", "due_date", "fine_per_day"]
-        missing = [field for field in required_fields if not data.get(field)]
-        if missing:
-            logger.warning("Missing fields: %s", missing)
-            return Response(
-                {"error": f"Missing required fields: {', '.join(missing)}"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         # Debug: log student info
         user_client = UserGRPCClient()
         try:
@@ -37,7 +33,7 @@ class FeeAllocationView(APIView):
                 academic_year=data.get("academic_year")
             )
             if not students:
-                print("No students found for this grade/year. Continuing fee allocation...")
+                logger.info("No students found for this grade/year. Continuing fee allocation...")
         finally:
             user_client.close()
         # Debug: log types before gRPC
@@ -60,38 +56,30 @@ class FeeAllocationView(APIView):
             logger.info("Payment service response: %s", response)
             return Response({"message": response.message}, status=status.HTTP_201_CREATED)
 
-        except (ValueError, TypeError) as e:
-            tb = traceback.format_exc() 
+        except (ValueError, TypeError) as e: #invalid input data types
+            tb = traceback.format_exc() #traceback info of the latest exception
             print(f"Error occurred:\n{tb}") 
             return Response(
                 {"error": str(e), "traceback": tb.splitlines()[-1]},  
                 status=status.HTTP_400_BAD_REQUEST
             )
-        except grpc.RpcError as e:
+        except grpc.RpcError as e:  #service unavailable
             logger.error("gRPC error: %s", e)
             return Response({"error": "Payment service unavailable"}, status=status.HTTP_502_BAD_GATEWAY)
-        except Exception as e:
+        except Exception as e: #unexpected errors,db connection errors
             logger.exception("Unexpected error")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         finally:
-            try:
-                client.close()
-            except Exception:
-                pass
+            client.close()      
 
 class InitiatePaymentView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated,IsStudent]
 
     def post(self, request):
-        
-        student_fee_id = request.data.get("student_fee_id")
-        gateway = request.data.get("gateway")
-
-        if not student_fee_id or not gateway:
-            return Response(
-                {"error": "student_fee_id and gateway are required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = InitiatePaymentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        student_fee_id = serializer.validated_data['student_fee_id']
+        gateway = serializer.validated_data['gateway']
 
         if not hasattr(request.user, 'student') or not request.user.student:
             print("ERROR: No student found in request.user")
@@ -101,9 +89,6 @@ class InitiatePaymentView(APIView):
             )
 
         student_id = request.user.student.id
-        print(f"Using student_id: {student_id}")
-
-        # Test payment service connection first
         client = PaymentGRPCClient()
         try:   
             response = client.initiate_payment(
@@ -133,7 +118,6 @@ class InitiatePaymentView(APIView):
             )
         except Exception as e:
             print(f"Unexpected error: {type(e).__name__}: {str(e)}")
-            import traceback
             print(f"Traceback: {traceback.format_exc()}")
             return Response(
                 {"error": str(e)},
@@ -143,9 +127,18 @@ class InitiatePaymentView(APIView):
             client.close()
         
 class SimulateRazorpayPaymentView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated,IsStudent]
 
     def post(self, request):
+        def post(self, request):
+            try:
+                serializer = SimulateRazorpayPaymentSerializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+            except Exception as e:
+                return Response(
+                    {"error": f"Invalid input: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         payment_id = request.data.get("payment_id")
         razorpay_order_id = request.data.get("razorpay_order_id")
 
@@ -174,7 +167,7 @@ class SimulateRazorpayPaymentView(APIView):
             )
 
 class VerifyRazorpayPaymentView(APIView):
-    permission_classes = [permissions.IsAuthenticated] 
+    permission_classes = [permissions.IsAuthenticated,IsStudent] 
 
     def post(self, request):
         payment_id = request.data.get("payment_id")
@@ -189,8 +182,6 @@ class VerifyRazorpayPaymentView(APIView):
             return Response({"error": "Only students can verify payments"}, status=403)
 
         student_id = request.user.student.id
-        print(f"Using student_id: {student_id}")
-
         pay_client = PaymentGRPCClient()
         try:
             verify_response = pay_client.verify_payment(

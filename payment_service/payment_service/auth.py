@@ -10,32 +10,32 @@ import grpc
 logger = logging.getLogger(__name__)
 
 class RemoteUser(SimpleNamespace):
-    def __init__(self, id, username=None, email=None, teacher=None, student=None):
+    def __init__(self, id, username=None, email=None,role=None, teacher=None, student=None):
         super().__init__()
         self.id = id
         self.username = username or f'user_{id}'
         self.email = email
+        self.role = role
         self.is_authenticated = True
         self.teacher = teacher
         self.student = student
 
+    # @property
+    # def is_staff(self):
+    #     return self.role == "admin"
+        
 class UserServiceJWTAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
-        print("=== DEBUG: Starting authentication ===")
         
         # Check if Authorization header exists
         auth_header = authentication.get_authorization_header(request)
-        print(f"DEBUG: Full auth header: {auth_header}")
-        
+        print(f"DEBUG: Authorization header: {auth_header}")
         header = auth_header.split()
-        print(f"DEBUG: Split header: {header}")
-        
+        print(f"DEBUG: Authorization header parts: {header}")
         if not header:
-            print("DEBUG: No header found")
             return None
             
         if header[0].lower() != b'bearer':
-            print(f"DEBUG: Not bearer token, got: {header[0]}")
             return None
             
         if len(header) == 1:
@@ -72,7 +72,8 @@ class UserServiceJWTAuthentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed(f"Invalid token: {str(e)}")
 
         # Extract user_id
-        user_id = payload.get('user_id') or payload.get('userId') or payload.get('sub')
+        user_id = payload.get('user_id')
+        role = payload.get('role')
         print(f"DEBUG: Extracted user_id: {user_id}")
         
         if not user_id:
@@ -89,10 +90,11 @@ class UserServiceJWTAuthentication(authentication.BaseAuthentication):
         if teacher_id_claim or student_id_claim:
             teacher = SimpleNamespace(id=int(teacher_id_claim)) if teacher_id_claim else None
             student = SimpleNamespace(id=int(student_id_claim)) if student_id_claim else None
-            remote_user = RemoteUser(id=int(user_id), teacher=teacher, student=student)
+            remote_user = RemoteUser(id=int(user_id),teacher=teacher, student=student)
             print(f"DEBUG: Created user from claims: {remote_user}")
         else:
             print("DEBUG: No direct claims, querying user service via gRPC...")
+            
             
             # gRPC lookup
             client = UserGRPCClient()
@@ -100,42 +102,42 @@ class UserServiceJWTAuthentication(authentication.BaseAuthentication):
                 teacher = None
                 student = None
 
-                # Teacher lookup
-                try:
-                    print(f"DEBUG: Looking up teacher for user_id: {user_id}")
-                    teacher_resp = client.get_teacher_by_user(user_id)
-                    print(f"DEBUG: Teacher response: {teacher_resp}")
-                    
-                    if getattr(teacher_resp, 'teacher_id', 0):
-                        teacher = SimpleNamespace(
-                            id=getattr(teacher_resp, 'teacher_id', None),
-                            first_name=getattr(teacher_resp, 'first_name', None),
-                            last_name=getattr(teacher_resp, 'last_name', None),
-                            email=getattr(teacher_resp, 'email', None),
-                        )
-                        print(f"DEBUG: Created teacher object: {teacher}")
-                except grpc.RpcError as e:
-                    print(f"DEBUG: Teacher lookup gRPC error: {e.code()}: {e.details()}")
+                if(teacher_id_claim):
+                    try:
+                        print(f"DEBUG: Looking up teacher for user_id: {user_id}")
+                        teacher_resp = client.get_teacher_by_user(user_id)
+                        print(f"DEBUG: Teacher response: {teacher_resp}")
+                        
+                        if getattr(teacher_resp, 'teacher_id', 0):
+                            teacher = SimpleNamespace(
+                                id=getattr(teacher_resp, 'teacher_id', None),
+                                first_name=getattr(teacher_resp, 'first_name', None),
+                                last_name=getattr(teacher_resp, 'last_name', None),
+                                email=getattr(teacher_resp, 'email', None),
+                            )
+                            print(f"DEBUG: Created teacher object: {teacher}")
+                    except grpc.RpcError as e:
+                        print(f"DEBUG: Teacher lookup gRPC error: {e.code()}: {e.details()}")
 
-                # Student lookup
-                try:
-                    print(f"DEBUG: Looking up student for user_id: {user_id}")
-                    student_resp = client.get_student_by_user(user_id)
-                    print(f"DEBUG: Student response: {student_resp}")
-                    
-                    if getattr(student_resp, 'student', None) and getattr(student_resp.student, 'student_id', 0):
-                        student = SimpleNamespace(
-                            id=getattr(student_resp.student, 'student_id', None),
-                            first_name=getattr(student_resp.student, 'first_name', None),
-                            last_name=getattr(student_resp.student, 'last_name', None),
-                            email=getattr(student_resp.student, 'email', None),
-                            grade=getattr(student_resp.student, 'grade', None),
-                        )
-                        print(f"DEBUG: Created student object: {student}")
-                except grpc.RpcError as e:
-                    print(f"DEBUG: Student lookup gRPC error: {e.code()}: {e.details()}")
+                if(student_id_claim):
+                    try:
+                        print(f"DEBUG: Looking up student for user_id: {user_id}")
+                        student_resp = client.get_student_by_user(user_id)
+                        print(f"DEBUG: Student response: {student_resp}")
+                        
+                        if getattr(student_resp, 'student', None) and getattr(student_resp.student, 'student_id', 0):
+                            student = SimpleNamespace(
+                                id=getattr(student_resp.student, 'student_id', None),
+                                first_name=getattr(student_resp.student, 'first_name', None),
+                                last_name=getattr(student_resp.student, 'last_name', None),
+                                email=getattr(student_resp.student, 'email', None),
+                                grade=getattr(student_resp.student, 'grade', None),
+                            )
+                            print(f"DEBUG: Created student object: {student}")
+                    except grpc.RpcError as e:
+                        print(f"DEBUG: Student lookup gRPC error: {e.code()}: {e.details()}")
 
-                remote_user = RemoteUser(id=int(user_id), teacher=teacher, student=student)
+                remote_user = RemoteUser(id=int(user_id),role=role , teacher=teacher, student=student)
                 print(f"DEBUG: Created user from gRPC: {remote_user}")
                 
             except Exception as e:

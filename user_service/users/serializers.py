@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from rest_framework.exceptions import ValidationError, AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import Teacher, Student 
+from django.db import transaction
 
 class TeacherSerializer(serializers.ModelSerializer):
     #external fields of user table
@@ -33,10 +34,13 @@ class TeacherSerializer(serializers.ModelSerializer):
         if Teacher.objects.filter(e_id=validated_data.get('e_id')).exists():
             raise ValidationError({'e_id': 'This e_id already exists.'})
 
-        user = User.objects.create_user(username=username, password=password, email=email)
-        validated_data['user'] = user#add the newly created teacher to the validated_data dictionary
-        return Teacher.objects.create(**validated_data)#create teacher with username,pwd,email and all additional fields
+        with transaction.atomic():
+            user = User.objects.create_user(username=username, password=password, email=email)
+            validated_data['user'] = user#add the newly created teacher to the validated_data dictionary
+            teacher =  Teacher.objects.create(**validated_data)#create teacher with username,pwd,email and all additional fields
 
+        return teacher
+    
 class StudentSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True, required=True)
     password = serializers.CharField(write_only=True, required=True)
@@ -66,11 +70,14 @@ class StudentSerializer(serializers.ModelSerializer):
         if Student.objects.filter(roll_number=validated_data.get('roll_number')).exists():
             raise ValidationError({'roll_number': 'Roll number already exists.'})
 
-        user = User.objects.create_user(username=username, password=password, email=email)
-        validated_data['user'] = user
-        return Student.objects.create(**validated_data)
+        with transaction.atomic():
+            user = User.objects.create_user(username=username, password=password, email=email)
+            validated_data['user'] = user
+            student =  Student.objects.create(**validated_data)
 
-
+        return student
+    
+    
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     role = serializers.CharField(required=False)
     #TokenObtainPairSerializer : generates access token,refresh token
@@ -114,6 +121,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         try:
             if hasattr(user, 'student') and user.student is not None:
                 token['student_id'] = int(user.student.id)
+        except Exception:
+            pass
+        try:
+            if user.is_superuser==1:
+                token['role'] = 'admin'
+            elif hasattr(user, 'teacher'):
+                token['role'] = 'teacher'
+            elif hasattr(user, 'student'): 
+                token['role'] = 'student'
         except Exception:
             pass
         return token

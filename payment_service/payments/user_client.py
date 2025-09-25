@@ -17,7 +17,7 @@ class UserGRPCClient:
 
     def get_teacher_by_user(self, user_id):
         # Fixed: Use correct request message name
-        request = user_service_pb2.GetTeacherByUserRequest(user_id=int(user_id))
+        request = user_service_pb2.GetTeacherRequest(user_id=int(user_id))
         try:
             return self.stub.GetTeacherByUserId(request)
         except grpc.RpcError as e:

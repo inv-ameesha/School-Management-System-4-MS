@@ -1,3 +1,4 @@
+import logging
 import grpc
 from concurrent import futures
 import time
@@ -22,7 +23,9 @@ from datetime import datetime
 from payments.validators import validate_fee_structure_data,validate_student_fee,validate_payment
 from django.db import IntegrityError, DatabaseError, OperationalError 
 from django.core.exceptions import ValidationError
-from user_client import UserGRPCClient
+from .user_client import UserGRPCClient
+
+logger = logging.getLogger(__name__)
 
 class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
     def AllocateFee(self, request, context):
@@ -37,9 +40,6 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 due_date = datetime.strptime(request.due_date, "%Y-%m-%d").date()
             else:
                 due_date = request.due_date
-
-            # Now safe to use in ORM and comparisons
-            validate_fee_structure_data(grade, academic_year, base_fee, due_date, fine_per_day)
 
             fee_structure, created = FeeStructure.objects.get_or_create(
                 grade=grade,
@@ -56,7 +56,9 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 fee_structure.due_date = due_date
                 fee_structure.fine_per_day = fine_per_day
                 fee_structure.save()
-
+                logger.info(f"Updated FeeStructure for grade {grade}, year {academic_year}")
+            else:
+                logger.info(f"Created FeeStructure for grade {grade}, year {academic_year}")
             TransactionLog.objects.create(
                 log_message=f"FeeStructure created/updated for grade {grade}",
                 log_type="info"
@@ -67,6 +69,7 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
             )
 
         except Exception as e:
+            logger.exception(f"Fee allocation failed for grade {request.grade}, year {request.academic_year}")
             TransactionLog.objects.create(
                 log_message=f"Fee allocation failed: {str(e)}",
                 log_type="error"
@@ -75,70 +78,6 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
             context.set_details(str(e))
             return payment_pb2.FeeAllocationResponse(message="Fee allocation failed")
         
-    def AllocateFeeForStudent(self, request, context):
-        try:
-            fee_structure = FeeStructure.objects.get(
-                grade=int(request.grade),
-                academic_year=request.academic_year
-            )
-            try:
-                validate_student_fee(request.student_id, fee_structure)
-            except ValidationError as ve:
-                TransactionLog.objects.create(
-                    log_message=f"Fee allocation failed validation for student {request.student_id}: {str(ve)}",
-                    log_type="error"
-                )
-                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-                context.set_details(str(ve))
-                return AllocateFeeForStudentResponse(message=str(ve))
-
-            student_fee = StudentFee.objects.create(
-                student_id=request.student_id,  
-                fee_structure=fee_structure,
-                due_date=fee_structure.due_date,
-                total_amount=fee_structure.base_fee
-            )
-
-            # check overdue
-            today = timezone.now().date()
-            fine_amount = 0
-            if today > fee_structure.due_date:
-                days_overdue = (today - fee_structure.due_date).days
-                fine_amount = days_overdue * fee_structure.fine_per_day
-                Fine.objects.create(
-                    student_fee=student_fee,
-                    student_id=request.student_id,
-                    days_overdue=days_overdue,
-                    fine_amount=fine_amount,
-                    calculated_on=today
-                )
-
-            student_fee.total_amount = fee_structure.base_fee + fine_amount
-            student_fee.save()
-            TransactionLog.objects.create(
-                log_message=f"Fee allocated for student {request.student_id}",      
-                log_type="info"
-            )
-            return AllocateFeeForStudentResponse(
-                message=f"Fee allocated for student {request.student_id}"
-            )
-        except FeeStructure.DoesNotExist:
-            TransactionLog.objects.create(
-                log_message=f"Fee structure not found for grade={request.grade}, year={request.academic_year}",
-                log_type="error"
-            )
-            context.set_code(grpc.StatusCode.NOT_FOUND)
-            context.set_details("No FeeStructure for grade/year")
-            return AllocateFeeForStudentResponse(message="Fee structure not found")
-        except Exception as e:
-            TransactionLog.objects.create(
-                log_message=f"Unexpected error during fee allocation for student {request.student_id}: {str(e)}",
-                log_type="error"
-            )
-            context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
-            return AllocateFeeForStudentResponse(message="Fee allocation failed")
-
     def InitiatePayment(self, request, context):
         try:
             with transaction.atomic():
@@ -406,10 +345,10 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 context.set_details("Payment record not found")
                 return payment_pb2.GenerateReceiptResponse()
             
-
+            # import pdb; pdb.set_trace()
             user_client = UserGRPCClient()
             student_resp = user_client.get_student_by_id(request.student_id)
-
+            print(student_resp)
             if not student_resp.found:
                 TransactionLog.objects.create(
                     log_message=f"Student not found for id={request.student_id}",
@@ -418,11 +357,10 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 context.set_code(grpc.StatusCode.NOT_FOUND)
                 context.set_details("Student not found")
                 return payment_pb2.GenerateReceiptResponse()
-
-            student_name = f"{student_resp.first_name} {student_resp.last_name}"
-            roll_number = student_resp.roll_number
-            grade = student_resp.grade
-            academic_year = student_resp.academic_year
+            
+            student_name = f"{student_resp.student.first_name} {student_resp.student.last_name}"
+            grade = student_resp.student.grade
+            academic_year = student_resp.student.academic_year
 
             try:
             # Generate PDF receipt
@@ -437,10 +375,9 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 c.drawString(200, 800, "Fee Payment Receipt")
                 c.setFont("Helvetica", 12)
                 c.drawString(50, 750, f"Student Name: {student_name}")
-                c.drawString(50, 730, f"Roll Number: {roll_number}")
                 c.drawString(50, 710, f"Class/Grade: {grade}")
                 c.drawString(50, 690, f"Academic Year: {academic_year}")
-                c.drawString(50, 670, f"Total Fee Paid: ₹{payment.amount}")
+                c.drawString(50, 670, f"Total Fee Paid: Rs.{payment.amount}")
                 c.drawString(50, 650, f"Payment Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 c.drawString(50, 630, f"Payment Method: {payment.gateway}")
                 c.drawString(50, 610, f"Transaction ID: {payment.transaction_id}")

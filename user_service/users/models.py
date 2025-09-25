@@ -18,7 +18,7 @@ class Teacher(models.Model):
         return f"{self.first_name} {self.last_name}"
 
 class Student(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE,related_name='student', null=True, blank=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)

@@ -8,11 +8,11 @@ from .grpc_client import UserGRPCClient
 from .exam_client import ExamGRPCClient
 from rest_framework import permissions
 from .serializers import ExamSerializer, ExamAssignmentSerializer, StudentExamAttemptSerializer 
-
+from permission import IsStudent, IsTeacher
 # logger = logging.getLogger(__name__)
 
 class ExamCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsTeacher]
 
     def post(self, request):
         user = request.user
@@ -90,9 +90,8 @@ class ExamCreateView(APIView):
         finally:
             client.channel.close()
 
-
 class AssignExamView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsStudent]
 
     def post(self, request):
         user = request.user
@@ -132,7 +131,7 @@ class AssignExamView(APIView):
 
 
 class TeacherCreatedExamsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsTeacher]
 
     def get(self, request):
         user = request.user
@@ -195,7 +194,7 @@ class TeacherCreatedExamsView(APIView):
             client.close()
 
 class StudentAssignedExamsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsStudent]
 
     def get(self, request):
         user = request.user
@@ -250,7 +249,7 @@ class StudentAssignedExamsView(APIView):
             client.close()
 
 class AttemptExamView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsStudent]
 
     def post(self, request):
         user_id = request.user.id  

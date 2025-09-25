@@ -79,7 +79,16 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
-    )
+    ),
+    # 'DEFAULT_RENDERER_CLASSES': (
+    #     'djangorestframework_camel_case.render.CamelCaseJSONRenderer',
+    #     'djangorestframework_camel_case.render.CamelCaseBrowsableAPIRenderer',
+    # ),
+    # 'DEFAULT_PARSER_CLASSES': (
+    #     'djangorestframework_camel_case.parser.CamelCaseJSONParser',
+    #     'djangorestframework_camel_case.parser.CamelCaseFormParser',
+    #     'djangorestframework_camel_case.parser.CamelCaseMultiPartParser',
+    # ),
 }
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
@@ -104,13 +113,15 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+        'file': {
+            'level': 'DEBUG',  
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'application.log',  
         },
     },
     'loggers': {
-        'payments.auth': {  # Adjust path if needed
-            'handlers': ['console'],
+        '': {  # root logger: catches everything
+            'handlers': ['file'],
             'level': 'DEBUG',
             'propagate': True,
         },

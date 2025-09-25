@@ -7,12 +7,12 @@ from .views import (
     ExamCreateView,
     AssignExamView,
     TeacherCreatedExamsView,
-    StudentAssignedExamsView,
+    StudentAssignedExamsView,AttemptExamView
 )
 urlpatterns = [
     path("exams", ExamCreateView.as_view(), name="create-exam"),
     path('exams/assign/', AssignExamView.as_view(), name='exam-assign'),
     path("exams/teacher/", TeacherCreatedExamsView.as_view(), name="teacher-exams"),
     path("exams/student/", StudentAssignedExamsView.as_view(), name="student-exams"),
-    # path('exam/attempt/', AttemptExamView.as_view(), name='exam-attempt'),
+    path('exam/attempt/', AttemptExamView.as_view(), name='exam-attempt'),
 ]
