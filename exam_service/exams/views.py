@@ -7,63 +7,57 @@ import logging
 from .grpc_client import UserGRPCClient
 from .exam_client import ExamGRPCClient
 from rest_framework import permissions
-from .serializers import ExamSerializer, ExamAssignmentSerializer, StudentExamAttemptSerializer 
-from permission import IsStudent, IsTeacher
+from .serializers import ExamAttemptSerializer, ExamSerializer, ExamAssignmentSerializer
+from .permission import IsStudent, IsTeacher
 # logger = logging.getLogger(__name__)
 
 class ExamCreateView(APIView):
     permission_classes = [IsAuthenticated,IsTeacher]
-
     def post(self, request):
         user = request.user
         user_client = UserGRPCClient(timeout_seconds=5)
+        serializer = ExamSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
         try:
             try:
                 teacher_response = user_client.get_teacher_by_user(user.id)
             except grpc.RpcError as e:
                 try:
-                    details = e.details()#gets the error details
+                    details = e.details()  # gets the error details
                 except Exception:
-                    details = str(e)#else stringify the error
-                    return Response({"error": "User service error", "detail": details}, status=status.HTTP_502_BAD_GATEWAY)
+                    details = str(e)  # else stringify the error
+                return Response({"error": "User service error", "detail": details}, status=status.HTTP_502_BAD_GATEWAY)
 
-            #fetch teacher_id from the response , default 0 if not found
+            # fetch teacher_id from the response, default 0 if not found
             teacher_id = getattr(teacher_response, 'teacher_id', 0)
             if not teacher_id:
                 return Response({"error": "Only teachers can create exams."}, status=status.HTTP_403_FORBIDDEN)
         finally:
             try:
-                user_client.close()#if method is not found/grpc connection is broken it will raise exception
+                user_client.close()  # if method is not found/grpc connection is broken it will raise exception
             except Exception:
                 pass
 
-        serializer = ExamSerializer(data=request.data, context={'request': request})
         client = ExamGRPCClient()
         try:
             response = client.create_exam(
-                title=serializer.validated_data["title"],
-                subject=serializer.validated_data["subject"],
-                date=serializer.validated_data["date"],
-                duration=serializer.validated_data["duration"],
+                title=data.get("title"),
+                subject=data.get("subject"),
+                date=data.get("date"),
+                duration=data.get("duration"),
                 teacher_id=teacher_id
             )
             return Response(
                 {"exam_id": response.exam_id, "message": response.message},
                 status=status.HTTP_201_CREATED
             )
-        #handles grpc errors only
-        except grpc.RpcError as e:
-            return Response(
-                {"error": e.details()},
-                #HTTP_400_BAD_REQUEST - missing data/invalid format
-                #HTTP_500_INTERNAL_SERVER_ERROR - unexpected errors(server crash)
-                status=status.HTTP_400_BAD_REQUEST if e.code() == grpc.StatusCode.INVALID_ARGUMENT else status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        finally:
-            client.channel.close()
-
+            return Response(
+                {"error": "Exam creation failed", "detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
     def get(self, request):
         client = ExamGRPCClient()
         try:
@@ -91,13 +85,14 @@ class ExamCreateView(APIView):
             client.channel.close()
 
 class AssignExamView(APIView):
-    permission_classes = [IsAuthenticated,IsStudent]
+    permission_classes = [IsAuthenticated, IsStudent]
 
     def post(self, request):
         user = request.user
-
-        # validate teacher via user service
         user_client = UserGRPCClient(timeout_seconds=5)
+        serializer = ExamAssignmentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
         try:
             try:
                 teacher_response = user_client.get_teacher_by_user(user.id)
@@ -106,29 +101,50 @@ class AssignExamView(APIView):
                     details = e.details()
                 except Exception:
                     details = str(e)
-                return Response({"error": "User service error", "detail": details}, status=status.HTTP_502_BAD_GATEWAY)
+                return Response(
+                    {"error": "User service error", "detail": details},
+                    status=status.HTTP_502_BAD_GATEWAY
+                )
 
             teacher_id = getattr(teacher_response, 'teacher_id', 0)
             if not teacher_id:
-                return Response({"error": "Only teachers can assign exams."}, status=status.HTTP_403_FORBIDDEN)
+                return Response(
+                    {"error": "Only teachers can assign exams."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         finally:
-            user_client.close()
+            try:
+                user_client.close()
+            except Exception:
+                pass
 
-        serializer = ExamAssignmentSerializer(data=request.data)
         client = ExamGRPCClient()
+
         try:
+            exam_id = data.get("exam_id")
+            student_id = data.get("student_id", [])
+            
+            # ensure student_id is a list
+            if not isinstance(student_id, list):
+                student_id = [student_id]
+
             response = client.assign_exam(
-                exam_id=serializer.validated_data["exam"].id,
-                student_ids=[serializer.validated_data["student"].id],
+                exam_id=exam_id,
+                student_id=student_id
             )
             return Response({"message": response.message}, status=status.HTTP_201_CREATED)
         except grpc.RpcError as e:
-            return Response({"error": e.details()}, status=status.HTTP_400_BAD_REQUEST if e.code() == grpc.StatusCode.INVALID_ARGUMENT else status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": e.details()},
+                status=status.HTTP_400_BAD_REQUEST if e.code() == grpc.StatusCode.INVALID_ARGUMENT else status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         finally:
-            client.close()
-
+            try:
+                client.close()
+            except Exception:
+                pass
 
 class TeacherCreatedExamsView(APIView):
     permission_classes = [IsAuthenticated,IsTeacher]
@@ -254,18 +270,20 @@ class AttemptExamView(APIView):
     def post(self, request):
         user_id = request.user.id  
         user_client = UserGRPCClient()
+        serializer = ExamAttemptSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
         student_response = user_client.get_student_by_user(user_id)
 
-        if not student_response.found:
+        if not student_response:
             return Response(
                 {"error": "Only students can attempt exams"},
                 status=status.HTTP_403_FORBIDDEN
             )
-
-        student_id = student_response.student_id
-        serializer = StudentExamAttemptSerializer(data=request.data)
-        exam_id = serializer.validated_data["exam"].id
-        score = request.data.get("score")
+        print(student_response)
+        student_id = student_response.student.student_id
+        exam_id = data.get("exam_id")
+        score = data.get("score")
 
         if not exam_id or score is None:
             return Response(

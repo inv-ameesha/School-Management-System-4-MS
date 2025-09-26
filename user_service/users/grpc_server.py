@@ -11,11 +11,12 @@ django.setup()
 # Fixed: Use absolute import instead of relative import
 from .models import Student, Teacher  # Adjust based on your app structure
 
-
 class UserServiceServicer(user_pb2_grpc.UserServiceServicer):
     def GetStudentsByIds(self, request, context):
+        # import pdb;pdb.set_trace()
         try:
-            students = Student.objects.filter(id__in=request.student_ids)
+            print(request.user_id)
+            students = Student.objects.filter(id__in=request.user_id)
             return user_service_pb2.GetStudentsResponse(
                 students=[
                     user_service_pb2.Student(
@@ -36,19 +37,16 @@ class UserServiceServicer(user_pb2_grpc.UserServiceServicer):
     def GetTeacherByUserId(self, request, context):
         try:
             teacher = Teacher.objects.get(user_id=request.user_id)
-            return user_service_pb2.GetTeacherByUserResponse(  # Fixed: Use correct response type
-                found=True,
-                teacher=user_service_pb2.Teacher(
-                    teacher_id=teacher.id,
-                    first_name=teacher.first_name,
-                    last_name=teacher.last_name,
-                    email=teacher.email,
-                )
+            return user_service_pb2.GetTeacherResponse(
+                teacher_id=teacher.id,
+                first_name=teacher.first_name,
+                last_name=teacher.last_name,
+                email=teacher.email,
             )
         except Teacher.DoesNotExist:
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details("Teacher not found")
-            return user_service_pb2.GetTeacherByUserResponse(found=False)
+            return user_service_pb2.GetTeacherResponse()
         
     def GetStudentByUserId(self, request, context):
         try:

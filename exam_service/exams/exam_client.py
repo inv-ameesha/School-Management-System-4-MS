@@ -25,8 +25,8 @@ class ExamGRPCClient:
     def get_exam(self, exam_id):
         return self.stub.GetExam(pb.ExamRequest(exam_id=exam_id))
 
-    def assign_exam(self, exam_id, student_ids):
-        request = pb.AssignExamRequest(exam_id=int(exam_id), student_ids=student_ids)
+    def assign_exam(self, exam_id, student_id):
+        request = pb.AssignExamRequest(exam_id=int(exam_id), student_id=student_id)
         return self.stub.AssignExam(request)
 
     def get_exams_by_student(self, student_id):

@@ -32,8 +32,9 @@ def send_email(to_email, subject, body):
 def get_students(student_ids):
     try:
         with grpc.insecure_channel('localhost:50053') as channel:
+            # print(student_ids)
             stub = user_pb2_grpc.UserServiceStub(channel)
-            response = stub.GetStudentsByIds(user_pb2.GetStudentsRequest(student_ids=student_ids))
+            response = stub.GetStudentsByIds(user_pb2.GetStudentsRequest(user_id=student_ids))
             return response.students
     except grpc.RpcError as e:
         print(f"gRPC error fetching students: {e}")

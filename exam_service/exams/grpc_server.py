@@ -88,7 +88,7 @@ class ExamService(ExamServiceServicer):
         assigned_count = 0
         skipped = []
 
-        for sid in request.student_ids:
+        for sid in request.student_id:
             try:
                 # Store only student_id
                 ExamAssignment.objects.get_or_create(exam=exam, student_id=sid)
@@ -103,7 +103,7 @@ class ExamService(ExamServiceServicer):
             publish_event({
                 "event": "students_allocated",
                 "exam_id": exam.id,
-                "student_ids": list(request.student_ids),
+                "student_ids": list(request.student_id),
                 "message": f"{assigned_count} students allocated to exam {exam.id}"
             })
 

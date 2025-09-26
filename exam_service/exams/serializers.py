@@ -2,56 +2,36 @@ from .models import Exam, Question, ExamAssignment, StudentExamAttempt, StudentA
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from rest_framework.exceptions import ValidationError, AuthenticationFailed
-
-class QuestionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Question
-        fields = ['id', 'text', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option']
-
+from .validators import *
+from rest_framework.validators import UniqueTogetherValidator
 class ExamSerializer(serializers.ModelSerializer):
-    questions = QuestionSerializer(many=True)
-
+    title = serializers.CharField(max_length=255)
+    subject = serializers.CharField(max_length=100, validators=[validate_subject])
+    date = serializers.DateField(validators=[validate_date])
+    duration = serializers.IntegerField()
     class Meta:
         model = Exam
-        fields = ['id', 'title', 'subject', 'date', 'duration', 'questions']
+        fields = ['id', 'title', 'subject', 'date', 'duration']
 
-    def create(self, validated_data):
-        teacher_user = validated_data.pop('teacher', None)
-        if not teacher_user:
-            request = self.context.get('request')
-            teacher_user = request.user if request else None
-        
-        if not teacher_user or not hasattr(teacher_user, 'teacher'):
-            raise serializers.ValidationError("Only teachers can create exams.")
+class ExamAssignmentSerializer(serializers.ModelSerializer): 
+    exam_id = serializers.IntegerField()
+    student_id = serializers.ListField()
 
-        questions_data = validated_data.pop('questions',[])
-        exam = Exam.objects.create(teacher=teacher_user, **validated_data)  
-        for question_data in questions_data:
-            Question.objects.create(exam=exam, **question_data)
-
-
-class ExamAssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExamAssignment
-        fields = ['id', 'exam', 'student']
+        fields = ['id', 'exam_id', 'student_id']
+        validators = [
+            UniqueTogetherValidator(
+                queryset = ExamAssignment.objects.all(),
+                fields=['exam_id','student_id'],
+                message = 'Exam already assigned'
+            )
+        ]
 
-class StudentAnswerSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StudentAnswer
-        fields = ['question', 'selected_option']
-
-class StudentExamAttemptSerializer(serializers.ModelSerializer):
-    answers = StudentAnswerSerializer(many=True, write_only=True)
-
+class ExamAttemptSerializer(serializers.ModelSerializer):
+    score = serializers.IntegerField()
+    exam_id = serializers.IntegerField()
     class Meta:
         model = StudentExamAttempt
-        fields = ['exam', 'student', 'answers']
-        read_only_fields = ['start_time', 'submitted', 'score']
-
-    def create(self, validated_data):
-        answers_data = validated_data.pop('answers')
-        student = validated_data.pop('student', None)
-        attempt = StudentExamAttempt.objects.create(student=student, **validated_data)
-        for answer_data in answers_data:
-            StudentAnswer.objects.create(attempt=attempt, **answer_data)
-        return attempt
+        fields = ['score','exam_id']
+        

@@ -5,7 +5,7 @@ import warnings
 
 import exam_pb2 as exam__pb2
 
-GRPC_GENERATED_VERSION = '1.74.0'
+GRPC_GENERATED_VERSION = '1.75.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -51,9 +51,9 @@ class ExamServiceStub(object):
                 _registered_method=True)
         self.AssignExam = channel.unary_unary(
                 '/exams.ExamService/AssignExam',
-                request_serializer=exam__pb2.AssignExamRequest.SerializeToString,#serializes the request to be sent to server to protobuf wire format
+                request_serializer=exam__pb2.AssignExamRequest.SerializeToString,
                 response_deserializer=exam__pb2.AssignExamResponse.FromString,
-                _registered_method=True)#makes it a registered RPC call
+                _registered_method=True)
         self.GetExamsByStudent = channel.unary_unary(
                 '/exams.ExamService/GetExamsByStudent',
                 request_serializer=exam__pb2.StudentRequest.SerializeToString,

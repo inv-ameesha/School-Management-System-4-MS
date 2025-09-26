@@ -49,6 +49,16 @@ class UserServiceStub(object):
                 request_serializer=user__service__pb2.GetStudentByUserRequest.SerializeToString,
                 response_deserializer=user__service__pb2.GetStudentByUserResponse.FromString,
                 _registered_method=True)
+        self.GetStudentsByGradeYear = channel.unary_unary(
+                '/user_service.UserService/GetStudentsByGradeYear',
+                request_serializer=user__service__pb2.GetStudentsByGradeYearRequest.SerializeToString,
+                response_deserializer=user__service__pb2.GetStudentsByGradeYearResponse.FromString,
+                _registered_method=True)
+        self.GetStudentById = channel.unary_unary(
+                '/user_service.UserService/GetStudentById',
+                request_serializer=user__service__pb2.GetStudentByIdRequest.SerializeToString,
+                response_deserializer=user__service__pb2.GetStudentByIdResponse.FromString,
+                _registered_method=True)
 
 
 class UserServiceServicer(object):
@@ -72,6 +82,18 @@ class UserServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetStudentsByGradeYear(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetStudentById(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_UserServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -89,6 +111,16 @@ def add_UserServiceServicer_to_server(servicer, server):
                     servicer.GetStudentByUserId,
                     request_deserializer=user__service__pb2.GetStudentByUserRequest.FromString,
                     response_serializer=user__service__pb2.GetStudentByUserResponse.SerializeToString,
+            ),
+            'GetStudentsByGradeYear': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetStudentsByGradeYear,
+                    request_deserializer=user__service__pb2.GetStudentsByGradeYearRequest.FromString,
+                    response_serializer=user__service__pb2.GetStudentsByGradeYearResponse.SerializeToString,
+            ),
+            'GetStudentById': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetStudentById,
+                    request_deserializer=user__service__pb2.GetStudentByIdRequest.FromString,
+                    response_serializer=user__service__pb2.GetStudentByIdResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -172,6 +204,60 @@ class UserService(object):
             '/user_service.UserService/GetStudentByUserId',
             user__service__pb2.GetStudentByUserRequest.SerializeToString,
             user__service__pb2.GetStudentByUserResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetStudentsByGradeYear(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/user_service.UserService/GetStudentsByGradeYear',
+            user__service__pb2.GetStudentsByGradeYearRequest.SerializeToString,
+            user__service__pb2.GetStudentsByGradeYearResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetStudentById(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/user_service.UserService/GetStudentById',
+            user__service__pb2.GetStudentByIdRequest.SerializeToString,
+            user__service__pb2.GetStudentByIdResponse.FromString,
             options,
             channel_credentials,
             insecure,

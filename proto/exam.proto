@@ -9,6 +9,7 @@ service ExamService {
   rpc AssignExam(AssignExamRequest) returns (AssignExamResponse);
   rpc GetExamsByStudent(StudentRequest) returns (ListExamsResponse);
   rpc GetExamsByTeacher(TeacherRequest) returns (ListExamsResponse);
+  rpc AttemptExam (AttemptExamRequest) returns (AttemptExamResponse);
 }
 
 //if a request requires no params then empty
@@ -47,7 +48,7 @@ message CreateExamResponse {
 
 message AssignExamRequest {
   int32 exam_id = 1;
-  repeated int32 student_ids = 2;//allows assigning exam to multiple studennts as a list
+  repeated int32 student_id = 2;//allows assigning exam to multiple studennts as a list
 }
 
 message AssignExamResponse {
@@ -60,4 +61,13 @@ message StudentRequest {
 
 message TeacherRequest {
   int32 teacher_id = 1;
+}
+
+message AttemptExamRequest {
+  int32 exam_id = 1;
+  int32 score = 2;
+}
+
+message AttemptExamResponse {
+  string message = 1; 
 }
