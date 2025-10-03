@@ -67,10 +67,10 @@ class StudentViewSet(viewsets.ModelViewSet):
             }
 
             channel.basic_publish(
-                exchange='',
+                exchange='',#by default direct
                 routing_key='student_fee_queue',
                 body=json.dumps(message),
-                properties=pika.BasicProperties(delivery_mode=2)  # persistent
+                properties=pika.BasicProperties(delivery_mode=2)  # persistent msg
             )
             connection.close()
 
@@ -86,7 +86,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         student.email = student.email.replace("@", f"{tag}@")
         student.save()
 
-        return Response({"detail": "Student soft-deleted."}, status=202)
+        return Response({"detail": "Student soft-deleted."}, status=status.HTTP_202_ACCEPTED)
 
 class ImportStudentsCSV(APIView):
     parser_classes = [MultiPartParser]
@@ -173,175 +173,3 @@ class ImportStudentsCSV(APIView):
             },
             status=status.HTTP_201_CREATED if created else status.HTTP_400_BAD_REQUEST,
         )
-
-class FeeAllocationView(APIView):
-    permission_classes = [permissions.IsAdminUser]  # only admin can allocate fee
-
-    def post(self, request):
-        # Extract raw data directly from request
-        data = request.data  
-
-        # Validate required fields manually
-        required_fields = ["grade", "academic_year", "base_fee", "due_date", "fine_per_day"]
-        missing = [field for field in required_fields if not data.get(field)]
-        if missing:
-            return Response(
-                {"error": f"Missing required fields: {', '.join(missing)}"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        client = PaymentGRPCClient()
-        try:
-            response = client.allocate_fee(
-                grade=data.get("grade"),
-                academic_year=data.get("academic_year"),
-                base_fee = float(data.get("base_fee")), 
-                due_date=data.get("due_date"),  # ensure date format matches model (yyyy-mm-dd)
-                fine_per_day = float(data.get("fine_per_day")),
-            )
-            return Response(
-                {"message": response.message},
-                status=status.HTTP_201_CREATED
-            )
-        except (ValueError, TypeError):
-            return Response({"error": "Invalid input"}, status=400)
-        except grpc.RpcError:
-            return Response({"error": "Service unavailable"}, status=502)
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-class InitiatePaymentView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        student_fee_id = request.data.get("student_fee_id")
-        gateway = request.data.get("gateway")
-        print("hi")
-        if not student_fee_id or not gateway:
-            return Response(
-                {"error": "student_fee_id and gateway are required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        # print("User:", request.user)
-        # print("Is student:", hasattr(request.user, "student"))
-        client = PaymentGRPCClient()
-        try:
-            response = client.initiate_payment(
-                student_fee_id=int(student_fee_id),
-                student_id=request.user.student.id,
-                gateway=gateway,
-            )
-            return Response(
-                {
-                    "message": response.message,
-                    "payment_id": response.payment_id,
-                    "order_id": response.order_id,
-                    "amount": response.amount,
-                    "currency": response.currency,
-                },
-                status=status.HTTP_200_OK,
-                
-            )
-        except grpc.RpcError as e:
-            return Response(
-                {"error": e.details()},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-class SimulateRazorpayPaymentView(APIView):
-    permission_classes = [IsAuthenticated, IsStudent]
-
-    def post(self, request):
-        payment_id = request.data.get("payment_id")
-        razorpay_order_id = request.data.get("razorpay_order_id")
-
-        if not payment_id or not razorpay_order_id:
-            return Response(
-                {"error": "payment_id and razorpay_order_id are required"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        client = PaymentGRPCClient()
-        try:
-            response = client.simulate_razorpay_payment(
-                payment_id=int(payment_id),
-                razorpay_order_id=razorpay_order_id
-            )
-            return Response({
-                "payment_id": response.payment_id,
-                "razorpay_order_id": response.razorpay_order_id,
-                "razorpay_payment_id": response.razorpay_payment_id,
-                "razorpay_signature": response.razorpay_signature
-            }, status=status.HTTP_200_OK)
-
-        except grpc.RpcError as e:
-            return Response(
-                {"error": e.details()},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-class VerifyRazorpayPaymentView(APIView):
-    permission_classes = [IsAuthenticated, IsStudent]
-
-    def post(self, request):
-        payment_id = request.data.get("payment_id")
-        razorpay_order_id = request.data.get("razorpay_order_id")
-        razorpay_payment_id = request.data.get("razorpay_payment_id")
-        razorpay_signature = request.data.get("razorpay_signature")
-
-        if not all([payment_id, razorpay_order_id, razorpay_payment_id, razorpay_signature]):
-            return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
-
-        client = PaymentGRPCClient()
-        try:
-            response = client.verify_payment(
-                payment_id=int(payment_id),
-                razorpay_order_id=razorpay_order_id,
-                razorpay_payment_id=razorpay_payment_id,
-                razorpay_signature=razorpay_signature
-            )
-
-            if response.message != "Payment verified successfully":
-                return Response({"error": response.message}, status=status.HTTP_400_BAD_REQUEST)
-
-            student = request.user.student
-            receipt_response = client.generate_receipt(
-                payment_id=int(payment_id),
-                student=student
-            )
-
-            return Response(
-                {
-                    "message": receipt_response.message,
-                    "receipt_url": receipt_response.receipt_url
-                },
-                status=status.HTTP_200_OK
-            )
-
-        except grpc.RpcError as e:
-            return Response({"error": e.details()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-class TransactionLogView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        try:
-            client = PaymentGRPCClient()
-            response = client.list_logs()
-
-            logs = [
-                {
-                    "id": log.id,
-                    "log_message": log.log_message,
-                    "log_type": log.log_type,
-                    "created_at": log.created_at,
-                }
-                for log in response.logs
-            ]
-            return Response(logs, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": f"Failed to fetch logs: {str(e)}"}, status=500)

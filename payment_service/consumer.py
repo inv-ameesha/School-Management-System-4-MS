@@ -25,17 +25,16 @@ def callback(ch, method, properties, body):
         )
         print(f"[Payment] StudentFee created: {student_fee.id} for student {student_id}")
 
-        ch.basic_ack(delivery_tag=method.delivery_tag)  # acknowledge message
+        ch.basic_ack(delivery_tag=method.delivery_tag)  # acknowledge message,removes from q
     except FeeStructure.DoesNotExist:
         print(f"[ERROR] FeeStructure not found for grade {grade}, year {academic_year}")
-        # optionally don't ack → message can be retried later
     except Exception as e:
         print(f"[ERROR] Failed to create StudentFee for student {student_id}: {str(e)}")
 
 def start_consumer():
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
-    channel.queue_declare(queue='student_fee_queue', durable=True)
+    channel.queue_declare(queue='student_fee_queue', durable=True)#msg exist even if rabbit mq restarts
 
     channel.basic_qos(prefetch_count=1)  # fair dispatch
     channel.basic_consume(queue='student_fee_queue', on_message_callback=callback)

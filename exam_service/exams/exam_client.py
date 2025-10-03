@@ -36,11 +36,8 @@ class ExamGRPCClient:
         return self.stub.GetExamsByTeacher(pb.TeacherRequest(teacher_id=int(teacher_id)))
 
     def attempt_exam(self, exam_id, student_id, score):
-        request = pb.AttemptExamRequest(exam_id=int(exam_id), student_id=int(student_id), score=float(score))
+        request = pb.AttemptExamRequest(exam_id=int(exam_id), student_id=int(student_id), score=int(score))
         return self.stub.AttemptExam(request)
 
     def close(self):
-        try:
-            self.channel.close()
-        except Exception:
-            pass
+        self.channel.close()

@@ -17,7 +17,8 @@ class PaymentGRPCClient:
 
     def allocate_fee(self, grade, academic_year, base_fee, due_date, fine_per_day):
         request = payment_pb2.FeeAllocationRequest(
-            grade=str(grade),
+            grade=int(grade),
+            # grade=str(grade),
             academic_year=academic_year,
             base_fee=float(base_fee),
             due_date=due_date,

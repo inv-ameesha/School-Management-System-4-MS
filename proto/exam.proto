@@ -66,6 +66,7 @@ message TeacherRequest {
 message AttemptExamRequest {
   int32 exam_id = 1;
   int32 score = 2;
+  int32 student_id = 3;
 }
 
 message AttemptExamResponse {

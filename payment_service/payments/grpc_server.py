@@ -20,9 +20,6 @@ from payments.models import Payment,TransactionLog
 from reportlab.pdfgen import canvas
 from payments.models import Receipt
 from datetime import datetime
-from payments.validators import validate_fee_structure_data,validate_student_fee,validate_payment
-from django.db import IntegrityError, DatabaseError, OperationalError 
-from django.core.exceptions import ValidationError
 from .user_client import UserGRPCClient
 
 logger = logging.getLogger(__name__)

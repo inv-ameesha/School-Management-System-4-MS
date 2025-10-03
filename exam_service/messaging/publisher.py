@@ -1,6 +1,6 @@
 import pika
 import json
-
+import os
 RABBITMQ_HOST = 'localhost'  
 EXCHANGE_NAME = 'exam_events'
 

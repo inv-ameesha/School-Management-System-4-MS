@@ -2,8 +2,7 @@ from rest_framework.permissions import BasePermission
 
 class IsStudent(BasePermission):
     def has_permission(self, request, view):
-        print(request)
-        return hasattr(request.user, "student")
+        return hasattr(request.user, "student") and request.user.student is not None
     
 class IsAdminUser(BasePermission):
     def has_permission(self, request, view):

@@ -114,12 +114,20 @@ class ExamService(ExamServiceServicer):
         return AssignExamResponse(message=message)
 
     def GetExamsByStudent(self, request, context):
-        response = ListExamsResponse()
-        # import pdb; pdb.set_trace()
-        assignments = ExamAssignment.objects.filter(student_id=request.student_id)
+        response = exam_pb2.ListExamsResponse()
+        student_id = request.student_id
+
+        assignments = ExamAssignment.objects.filter(student_id=student_id)
+
+        attempted_ids = StudentExamAttempt.objects.filter(
+            student_id=student_id, submitted=1
+        ).values_list("exam_id", flat=True)
 
         for assignment in assignments:
             exam = assignment.exam
+            if exam.id in attempted_ids:
+                continue  # skip already attempted exams
+
             response.exams.add(
                 exam_id=exam.id,
                 title=exam.title,
@@ -128,6 +136,7 @@ class ExamService(ExamServiceServicer):
                 duration=exam.duration,
                 teacher_id=exam.teacher_id
             )
+
         return response
 
     def GetExamsByTeacher(self, request, context):
@@ -147,7 +156,6 @@ class ExamService(ExamServiceServicer):
 
     def AttemptExam(self, request, context):
         try:
-            # Validate exam exists
             try:
                 exam = Exam.objects.get(id=request.exam_id)
             except Exam.DoesNotExist:
@@ -155,7 +163,6 @@ class ExamService(ExamServiceServicer):
                 context.set_details("Exam not found")
                 return exam_pb2.AttemptExamResponse(message="Exam not found")
 
-            # Prevent duplicate submission
             if StudentExamAttempt.objects.filter(
                 student_id=request.student_id,
                 exam=exam

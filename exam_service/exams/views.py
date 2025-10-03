@@ -7,7 +7,7 @@ import logging
 from .grpc_client import UserGRPCClient
 from .exam_client import ExamGRPCClient
 from rest_framework import permissions
-from .serializers import ExamAttemptSerializer, ExamSerializer, ExamAssignmentSerializer
+from .serializers import ExamSerializer, ExamAssignmentSerializer
 from .permission import IsStudent, IsTeacher
 # logger = logging.getLogger(__name__)
 
@@ -113,10 +113,7 @@ class AssignExamView(APIView):
                     status=status.HTTP_403_FORBIDDEN
                 )
         finally:
-            try:
-                user_client.close()
-            except Exception:
-                pass
+            user_client.close()
 
         client = ExamGRPCClient()
 
@@ -270,9 +267,9 @@ class AttemptExamView(APIView):
     def post(self, request):
         user_id = request.user.id  
         user_client = UserGRPCClient()
-        serializer = ExamAttemptSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
+        # serializer = (data=request.data)
+        # serializer.is_valid(raise_exception=True)
+        # data = serializer.validated_data
         student_response = user_client.get_student_by_user(user_id)
 
         if not student_response:
@@ -282,8 +279,8 @@ class AttemptExamView(APIView):
             )
         print(student_response)
         student_id = student_response.student.student_id
-        exam_id = data.get("exam_id")
-        score = data.get("score")
+        exam_id = request.data.get("exam_id")
+        score = request.data.get("score")
 
         if not exam_id or score is None:
             return Response(

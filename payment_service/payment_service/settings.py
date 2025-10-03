@@ -108,7 +108,7 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-# Add this to settings.py
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
