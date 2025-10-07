@@ -2,7 +2,6 @@ import grpc
 import exam_pb2 as pb
 from exam_pb2_grpc import ExamServiceStub
 
-
 class ExamGRPCClient:
     def __init__(self, host='127.0.0.1', port=50051):
         options = [('grpc.keepalive_timeout_ms', 60000)]
